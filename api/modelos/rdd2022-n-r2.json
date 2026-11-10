@@ -1,0 +1,81 @@
+{
+ "nome": "yolov8n-rdd2022-r2",
+ "modelo_final": "rdd2022-n-r2",
+ "imgsz": 640,
+ "classes": [
+  "D00",
+  "D10",
+  "D20",
+  "D40"
+ ],
+ "limiares": {
+  "cidadao": 0.24,
+  "frota": 0.35
+ },
+ "iou_nms": 0.6,
+ "rodada": 2,
+ "amostra": {
+  "paises": [
+   "Japan",
+   "India",
+   "United_States",
+   "Czech"
+  ],
+  "n_pos_por_pais": 100000,
+  "fracao_neg": 0.1,
+  "semente": 42
+ },
+ "treino": {
+  "epocas_max": 100,
+  "paciencia": 20,
+  "lote": 16,
+  "pesos_base": {
+   "rdd2022-n-r2": "yolov8n.pt"
+  }
+ },
+ "equipamento": {
+  "gpu": "NVIDIA L4",
+  "cpu": "Intel(R) Xeon(R) CPU @ 2.20GHz · 12 núcleos lógicos",
+  "ultralytics": "8.3.253",
+  "torch": "2.14.1+cu130"
+ },
+ "metricas_teste": {
+  "rdd2022-n-r2": [
+   {
+    "classe": "todas",
+    "precisao": 0.606,
+    "recall": 0.548,
+    "mAP50": 0.584,
+    "mAP50_95": 0.287
+   },
+   {
+    "classe": "D00",
+    "precisao": 0.617,
+    "recall": 0.614,
+    "mAP50": 0.631,
+    "mAP50_95": 0.342
+   },
+   {
+    "classe": "D10",
+    "precisao": 0.58,
+    "recall": 0.522,
+    "mAP50": 0.554,
+    "mAP50_95": 0.247
+   },
+   {
+    "classe": "D20",
+    "precisao": 0.668,
+    "recall": 0.654,
+    "mAP50": 0.708,
+    "mAP50_95": 0.376
+   },
+   {
+    "classe": "D40",
+    "precisao": 0.558,
+    "recall": 0.404,
+    "mAP50": 0.445,
+    "mAP50_95": 0.183
+   }
+  ]
+ }
+}

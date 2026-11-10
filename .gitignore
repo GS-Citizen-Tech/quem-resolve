@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# Node / Next
+node_modules/
+.next/
+out/
+# Segredos (o .env.example é versionado)
+.env
+.env.local
+.env.*.local
+# Saídas do processamento de vídeo da frota (vídeo anotado, recortes)
+frota/saida/
