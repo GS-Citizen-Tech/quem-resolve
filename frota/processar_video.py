@@ -34,6 +34,7 @@ from PIL import Image
 
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent / "api"))  # reaproveita o detector da API (mesmo pré e pós-processamento)
+from app.providers.privacidade import Borrador  # noqa: E402
 from app.providers.visao import YoloVisao  # noqa: E402
 
 MODELO = AQUI.parent / "api" / "modelos" / "rdd2022-n-r2.onnx"
@@ -96,44 +97,7 @@ class Gps:
 
 
 # ---------------------------------------------------------------- privacidade
-class Borrador:
-    """Borra rostos, pessoas e placas. Usa detectores que já vêm no OpenCV (Haar para rosto e placa, HOG para pessoa
-    inteira): simples e rápidos, mas não perfeitos. Por isso o vídeo bruto nunca sai da máquina e só ficam os
-    recortes do dano e o vídeo anotado, já borrados."""
-
-    LARGURA = 640  # os detectores rodam numa cópia reduzida (bem mais rápido); as caixas voltam para o tamanho real
-
-    def __init__(self):
-        base = Path(cv2.data.haarcascades)
-        self.rosto = cv2.CascadeClassifier(str(base / "haarcascade_frontalface_default.xml"))
-        self.placa = cv2.CascadeClassifier(str(base / "haarcascade_russian_plate_number.xml"))
-        self.pessoa = cv2.HOGDescriptor()
-        self.pessoa.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-
-    def regioes(self, img) -> list[tuple[int, int, int, int]]:
-        esc = min(1.0, self.LARGURA / img.shape[1])
-        peq = cv2.resize(img, None, fx=esc, fy=esc, interpolation=cv2.INTER_AREA) if esc < 1 else img
-        cinza = cv2.cvtColor(peq, cv2.COLOR_BGR2GRAY)
-        h = peq.shape[0]
-        rs = []
-        for det, minimo, vizinhos in ((self.rosto, max(12, h // 45), 5), (self.placa, max(10, h // 70), 6)):
-            for (x, y, w, hh) in det.detectMultiScale(cinza, scaleFactor=1.1, minNeighbors=vizinhos, minSize=(minimo, minimo)):
-                rs.append((x, y, w, hh))
-        if peq.shape[0] >= 128:
-            caixas, pesos = self.pessoa.detectMultiScale(peq, winStride=(8, 8), padding=(8, 8), scale=1.08)
-            rs += [tuple(c) for c, p in zip(caixas, np.ravel(pesos)) if p > 0.5]
-        return [tuple(int(round(v / esc)) for v in r) for r in rs]
-
-    def aplicar(self, img, regioes) -> int:
-        for (x, y, w, h) in regioes:
-            pad = int(0.15 * max(w, h))
-            x0, y0 = max(0, x - pad), max(0, y - pad)
-            x1, y1 = min(img.shape[1], x + w + pad), min(img.shape[0], y + h + pad)
-            roi = img[y0:y1, x0:x1]
-            if roi.size:
-                k = max(15, (max(w, h) // 2) | 1)
-                img[y0:y1, x0:x1] = cv2.GaussianBlur(roi, (k, k), 0)
-        return len(regioes)
+# Borrador mora na API (app/providers/privacidade.py): o mesmo código protege a foto do cidadão.
 
 
 # ---------------------------------------------------------------- rastreio (RF53, versão simples)

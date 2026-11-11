@@ -2,7 +2,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.pipelines import analise_reporte, guardrail
 from app.providers import repositorio
-from app.providers.visao import ImagemInvalida, obter_visao
+from app.providers.visao import ImagemInvalida, detectar_cidadao
 from app.schemas.guardrail import GuardrailEntrada, GuardrailResultado
 from app.schemas.reporte import AnaliseReporte, ReporteEntrada
 from app.schemas.visao import VisaoResultado
@@ -32,7 +32,7 @@ async def detectar(foto: UploadFile = File(...)):
     if len(dados) > MAX_IMAGEM:
         raise HTTPException(413, "A foto passa de 8 MB.")
     try:
-        return obter_visao().detectar(dados)
+        return detectar_cidadao(dados)
     except ImagemInvalida:
         raise HTTPException(422, "Não consegui ler a foto. Tente tirar outra.")
 

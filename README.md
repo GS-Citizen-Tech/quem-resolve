@@ -32,6 +32,8 @@ pytest                           # testes
 
 A visão computacional usa o modelo real por padrão (`VISAO_PROVIDER=yolo`, arquivo `api/modelos/rdd2022-n-r2.onnx`, roda em CPU com onnxruntime, ~50 ms por foto). Para voltar ao mock, troque para `VISAO_PROVIDER=mock` no `.env`. Treino e métricas do modelo ficam fora da solução, em `Materias/VC`.
 
+Quando o YOLO não acha dano, a foto do cidadão pode ir para uma **reserva multimodal** (Gemini Flash), que reconhece as outras categorias (fio, lixo, poste, árvore, alagamento...). Ligue com `VISAO_RESERVA=gemini` e a chave do Google AI Studio em `VISAO_RESERVA_CHAVE` (ou `LLM_API_KEY`). Antes de sair do servidor a foto é reduzida, perde o EXIF e tem rostos, pessoas e placas borrados (LGPD). Sem chave ou com o Gemini fora do ar, o app segue só com o texto. `VISAO_RESERVA=mock` testa o fluxo sem chave.
+
 **Frota (vídeo de rua → ocorrências):** ver `frota/README.md`.
 
 **Front** (Node 20+):

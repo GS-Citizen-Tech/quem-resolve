@@ -23,7 +23,12 @@ export interface GuardrailResultado {
 }
 
 // C · Visão
-export interface Deteccao { classe: string; categoria_id: string | null; confianca: number; bbox: [number, number, number, number] }
+/** origem "yolo" = detector treinado (pavimento, sempre com caixa); "multimodal" = reserva para as outras categorias (caixa opcional). */
+export interface Deteccao {
+  classe: string; categoria_id: string | null; confianca: number;
+  bbox?: [number, number, number, number] | null;
+  origem?: "yolo" | "multimodal"; descricao?: string | null;
+}
 export interface VisaoResultado { deteccoes: Deteccao[]; modelo: string; latencia_ms: number }
 
 // D · Análise do reporte

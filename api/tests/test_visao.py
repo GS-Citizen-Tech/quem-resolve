@@ -66,6 +66,7 @@ def test_endpoint_com_modelo_real(client, yolo):
     assert r.status_code == 200
     corpo = r.json()
     assert set(corpo) == {"deteccoes", "modelo", "latencia_ms"}
+    assert all(d["origem"] == "yolo" and d["bbox"] for d in corpo["deteccoes"])
     assert corpo["modelo"].startswith("yolov8n-rdd2022")
 
 

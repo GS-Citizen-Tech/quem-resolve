@@ -6,7 +6,7 @@ para `POST /frota/passagens`. As ocorrências aparecem no console com `origem: "
 
 ## Instalar (uma vez)
 
-Usa o ambiente da API e acrescenta o OpenCV:
+Usa o mesmo ambiente da API (o OpenCV agora vem nele, porque a API também borra a foto do cidadão):
 
 ```
 cd "D:\FACULDADE\GS Citizen Tech\Solucao_Final"

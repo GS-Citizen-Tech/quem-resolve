@@ -5,11 +5,14 @@
   Não usa PyTorch nem Ultralytics, para caber no servidor gratuito. O pré e o pós-processamento
   reproduzem os do Ultralytics: letterbox para 640 px com cinza 114, pixels de 0 a 1, NMS por classe.
 
+`detectar_cidadao`: foto do cidadão. YOLO primeiro; se não achar nada, a reserva multimodal (visao_reserva.py).
+
 Treino e avaliação: Materias/VC/notebooks/01_rdd2022_treino_avaliacao.ipynb (fora da solução final).
 """
 import hashlib
 import io
 import json
+import logging
 import time
 from functools import lru_cache
 from pathlib import Path
@@ -19,6 +22,7 @@ from app import config
 from app.providers import base_conhecimento as base
 from app.schemas.visao import Deteccao, VisaoResultado
 
+log = logging.getLogger(__name__)
 CLASSES_MOCK = ["D40", "D00", "D20", "garbage", "drain_blocked"]
 API_DIR = Path(__file__).resolve().parents[2]
 
@@ -174,3 +178,29 @@ def obter_visao() -> Visao:
     if config.VISAO_PROVIDER == "yolo":
         return _yolo()
     raise NotImplementedError(f"Provedor de visão '{config.VISAO_PROVIDER}' não existe (use mock ou yolo)")
+
+
+def detectar_cidadao(imagem: bytes) -> VisaoResultado:
+    """Foto do cidadão: YOLO primeiro; se ele não achar nada, a reserva multimodal (se ligada) olha a foto borrada.
+
+    A frota não passa por aqui: usa só o YOLO, com o limiar dela.
+    """
+    from app.providers.visao_reserva import ErroReserva, obter_reserva
+
+    inicio = time.perf_counter()
+    resultado = obter_visao().detectar(imagem)
+    if resultado.deteccoes:
+        return resultado
+    try:
+        reserva = obter_reserva()
+        if reserva is None:
+            return resultado
+        from app.providers.privacidade import borrar_pil
+
+        im, _ = borrar_pil(YoloVisao.abrir(imagem))
+        deteccoes = reserva.classificar(im)
+    except ErroReserva as e:
+        log.warning("%s", e)  # sem reserva o app segue como antes: só o texto do cidadão
+        return resultado
+    return VisaoResultado(deteccoes=deteccoes, modelo=f"{resultado.modelo} + {reserva.nome}",
+                          latencia_ms=round((time.perf_counter() - inicio) * 1000, 1))

@@ -21,6 +21,12 @@ LLM_MODEL = os.getenv("LLM_MODEL", "")
 YOLO_MODELO = os.getenv("YOLO_MODELO", "modelos/rdd2022-n-r2.onnx")  # o .json com classes e limiares fica ao lado
 YOLO_LIMIAR = float(os.environ["YOLO_LIMIAR"]) if os.getenv("YOLO_LIMIAR") else None  # vazio = limiar do cidadão escolhido no treino
 
+# Reserva multimodal da foto do cidadão: entra quando o YOLO não acha nada (fio, lixo, poste, árvore, alagamento...).
+VISAO_RESERVA = os.getenv("VISAO_RESERVA", "off")                    # off | mock | gemini
+VISAO_RESERVA_MODELO = os.getenv("VISAO_RESERVA_MODELO", "gemini-3.5-flash,gemini-3.8-flash")  # lista: tenta o próximo se o primeiro estiver sobrecarregado
+VISAO_RESERVA_CHAVE = os.getenv("VISAO_RESERVA_CHAVE", "") or os.getenv("LLM_API_KEY", "")  # vazio = usa a chave do LLM
+VISAO_RESERVA_TIMEOUT = float(os.getenv("VISAO_RESERVA_TIMEOUT", "8"))
+
 CORS_ORIGINS = _lista("CORS_ORIGINS", "http://localhost:3000")
 LIMIAR_CONFIANCA = float(os.getenv("LIMIAR_CONFIANCA", "0.5"))  # abaixo disso: confiança baixa, pede confirmação
 LIMIAR_IOT = float(os.getenv("LIMIAR_IOT", "0.7"))

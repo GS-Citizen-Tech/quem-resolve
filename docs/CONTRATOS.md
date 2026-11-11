@@ -152,6 +152,28 @@ Saída:
 - Lista ordenada da maior para a menor confiança. A orientação EXIF da foto do celular já é aplicada, então a `bbox` casa com a foto que o navegador mostra.
 - Erros: `415` formato não aceito, `413` acima de 8 MB, `422` arquivo de imagem corrompido.
 
+**Reserva multimodal (v0.6).** O YOLO só conhece dano no pavimento. Quando ele não acha nada e `VISAO_RESERVA=gemini`, a foto
+(reduzida para 1024 px, sem EXIF, com rostos, pessoas e placas borrados) vai para o Gemini Flash com a lista das 20 categorias:
+
+```json
+{
+  "deteccoes": [
+    { "classe": "fio_energia", "categoria_id": "fio_energia", "confianca": 0.49, "bbox": [0.20, 0.10, 0.90, 0.50],
+      "origem": "multimodal", "descricao": "Fio caído sobre a calçada" }
+  ],
+  "modelo": "yolov8n-rdd2022-r2 + gemini-3.5-flash",
+  "latencia_ms": 2140.0
+}
+```
+
+- `origem`: `yolo` (detector treinado, sempre com `bbox`) ou `multimodal` (reserva). Ausente = `yolo`.
+- `bbox` passa a ser **opcional**: o multimodal pode devolver `null` quando o problema ocupa a foto toda. O front mostra só a legenda.
+- `descricao`: frase curta do multimodal. `null` no YOLO.
+- A confiança do multimodal é um palpite do modelo, não calibrado. Ela é limitada a `LIMIAR_CONFIANCA − 0,01`, então sempre pede confirmação.
+- `VISAO_RESERVA_MODELO` aceita uma lista (padrão `gemini-3.5-flash,gemini-3.8-flash`): com 429 ou 5xx tenta o próximo, dentro dos mesmos 8 s.
+- Se o multimodal não vê problema, ou falha (sem chave, timeout de 8 s, resposta inválida), volta `deteccoes = []` como antes.
+- A frota (`I`) nunca usa a reserva.
+
 ---
 
 ## D. Análise do reporte (fluxo principal do cidadão)
@@ -468,3 +490,4 @@ Saída:
 | 0.3 | 08/11/2026 | Ian | Limiar de confirmação 0,5 e faixas de confiança alinhados ao design system |
 | 0.4 | 10/11/2026 | Ian | Visão real (YOLOv8n RDD2022 em ONNX): limiar 0,24, ordem por confiança, EXIF, erro `422` (formato da resposta não mudou) |
 | 0.5 | 10/11/2026 | Ian | `GET /ocorrencias/{id}` (E) para "Meus reportes" acompanhar o status |
+| 0.6 | 10/11/2026 | Ian | Visão (C): reserva multimodal (Gemini Flash) quando o YOLO não acha nada; `Deteccao` ganha `origem` e `descricao`, `bbox` vira opcional |

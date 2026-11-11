@@ -36,7 +36,7 @@ Os módulos do parceiro entram na API trocando o mock pela implementação real,
 ```
 api/   FastAPI · app/routers · app/schemas (Pydantic = contratos) · app/pipelines (lógica) · app/providers (LLM, visão, RAG, voz, dados, login)
        Tudo começa em "mock" (config.py, variáveis *_PROVIDER). Dados em memória + 120 ocorrências simuladas.
-       Testes: cd api && pytest   (35 testes: 26 da F0 + 8 da visão + 1 da F1)
+       Testes: cd api && pytest   (46 testes: 26 da F0 + 8 da visão + 1 da F1 + 11 da reserva multimodal)
        Visão real: app/providers/visao.py (YoloVisao, ONNX + onnxruntime, sem PyTorch) · modelo em api/modelos/rdd2022-n-r2.onnx + .json (classes, limiares)
 web/   Next.js 16 (App Router) + Tailwind v4 + lucide-react
        src/features (telas) · src/ui (componentes reutilizáveis) · src/state (AppState: tema, meus reportes, conversa, sessão do gestor) · src/providers (api.ts + tipos.ts)
@@ -68,5 +68,5 @@ web/   Next.js 16 (App Router) + Tailwind v4 + lucide-react
 - ✅ **F1 · fluxo do cidadão** (10/11): `/reportar` numa rota só com etapas (captura com ditado, foto reduzida no aparelho e localização → analisando → emergência básica nível 1/2 ou aviso nível 3 → resultado com foto e caixas da visão, selo de confiança e "Não é isso" → confirmação → protocolo com "Isso ajudou?"), escolha manual com a base embutida quando a API cai, e `/meus-reportes` com status via `GET /ocorrencias/{id}`. Plano e resultado: `docs/PLANO-F1.md`. Prints: `docs/evidencias/f1/`. Casos de teste da IA: `docs/CASOS-TESTE-IA.md`.
 - ⏭️ **Próximo: F2** (emergência completa com saída rápida, assistente, voz, alerta OuviAí).
 - Depois: F3 (login + console com Plotly e 2 filtros, mapa, filas, frota), F4 (acabamento, deploy Vercel + Render, docker-compose, teste com 3 pessoas, README completo), F5 (vídeo de 5 min).
-- ✅ **Visão Computacional (V4, 10/11)**: modelo YOLOv8n RDD2022 rodada 2 (mAP@50 0,584 no teste) ligado na API em `/visao/detectar`. Treino, métricas e plano em `../Materias/VC/` (PLANO-VC.md). V5 (10/11): `frota/processar_video.py` (vídeo ou pasta de fotos → detecção com o mesmo YoloVisao, borra rosto/pessoa/placa, rastreio por IoU, GPX ou trajeto simulado → `POST /frota/passagens`; ver `frota/README.md`). Próximo da VC: relatório.
-- Ainda **não há repositório no GitHub**. A entrega exige um repositório público.
+- ✅ **Visão Computacional (V4, 10/11)**: modelo YOLOv8n RDD2022 rodada 2 (mAP@50 0,584 no teste) ligado na API em `/visao/detectar`. Treino, métricas e plano em `../Materias/VC/` (PLANO-VC.md). V5 (10/11): `frota/processar_video.py` (vídeo ou pasta de fotos → detecção com o mesmo YoloVisao, borra rosto/pessoa/placa, rastreio por IoU, GPX ou trajeto simulado → `POST /frota/passagens`; ver `frota/README.md`). Relatório v1 em `../Materias/VC/relatorio/`. Reserva multimodal (10/11): `app/providers/visao_reserva.py` (Gemini Flash, `VISAO_RESERVA`), entra só na foto do cidadão quando o YOLO não acha nada; foto borrada antes (`app/providers/privacidade.py`, o mesmo Borrador da frota); contrato v0.6.
+- Repositório público: https://github.com/GS-Citizen-Tech/quem-resolve (org GS-Citizen-Tech, `origin`, branch `main`).
