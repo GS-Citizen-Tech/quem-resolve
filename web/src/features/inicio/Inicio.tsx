@@ -16,7 +16,7 @@ export function Inicio() {
         <BotaoLink href="/reportar" icone={Camera} bloco className="min-h-16! text-xl!">Reportar problema</BotaoLink>
         <div className="grid gap-3 sm:grid-cols-2">
           <BotaoLink href="/assistente" variante="secundario" icone={MessageCircleQuestion} bloco>Tenho uma dúvida</BotaoLink>
-          <BotaoLink href="/reportar?voz=1" variante="secundario" icone={Mic} bloco>Falar</BotaoLink>
+          <BotaoLink href="/assistente?voz=1" variante="secundario" icone={Mic} bloco>Falar</BotaoLink>
         </div>
       </div>
     </Painel>

@@ -4,15 +4,19 @@
 // A sessão do gestor fica só na aba (sessionStorage) e expira sozinha.
 import { createContext, useContext, useEffect, useReducer, useRef, type ReactNode } from "react";
 import { definirToken } from "@/providers/api";
-import type { Mensagem, Ocorrencia, Sessao } from "@/providers/tipos";
+import type { Mensagem, Ocorrencia, RespostaAssistente, Sessao } from "@/providers/tipos";
 
 export type Tema = "claro" | "escuro" | "alto-contraste";
+/** Mensagem da conversa com o assistente. A resposta completa (fontes, id) fica junto para mostrar e avaliar. */
+export interface MensagemConversa extends Mensagem { resposta?: RespostaAssistente; latenciaMs?: number; via?: "texto" | "voz" }
 export type ReporteSalvo = Pick<Ocorrencia, "id" | "protocolo" | "categoria_final" | "responsavel_id" | "criada_em" | "status">;
 
 export interface Estado {
   tema: Tema;
   meusReportes: ReporteSalvo[];
-  conversa: Mensagem[];
+  conversa: MensagemConversa[];
+  avisosSom: boolean;          // alerta OuviAí ligado (padrão: sim)
+  consentimentoVoz: boolean;   // aceitou o aviso de que o áudio vai para o servidor
   sessao: Sessao | null;
   carregado: boolean;
 }
@@ -22,12 +26,14 @@ export type Acao =
   | { tipo: "tema"; tema: Tema }
   | { tipo: "reporteEnviado"; ocorrencia: Ocorrencia }
   | { tipo: "statusAtualizado"; atualizados: Pick<Ocorrencia, "id" | "status" | "categoria_final" | "responsavel_id">[] }
-  | { tipo: "mensagem"; mensagem: Mensagem }
+  | { tipo: "mensagem"; mensagem: MensagemConversa }
+  | { tipo: "avisosSom"; ligado: boolean }
+  | { tipo: "consentimentoVoz" }
   | { tipo: "limparConversa" }
   | { tipo: "login"; sessao: Sessao }
   | { tipo: "logout" };
 
-const inicial: Estado = { tema: "claro", meusReportes: [], conversa: [], sessao: null, carregado: false };
+const inicial: Estado = { tema: "claro", meusReportes: [], conversa: [], avisosSom: true, consentimentoVoz: false, sessao: null, carregado: false };
 const CHAVE_LOCAL = "quem-resolve:v1";
 const CHAVE_SESSAO = "quem-resolve:gestor";
 
@@ -49,9 +55,23 @@ export function reducer(s: Estado, a: Acao): Estado {
     }
     case "mensagem": return { ...s, conversa: [...s.conversa, a.mensagem].slice(-20) };
     case "limparConversa": return { ...s, conversa: [] };
+    case "avisosSom": return { ...s, avisosSom: a.ligado };
+    case "consentimentoVoz": return { ...s, consentimentoVoz: true };
     case "login": return { ...s, sessao: a.sessao };
     case "logout": return { ...s, sessao: null };
   }
+}
+
+/**
+ * Saída rápida (violência doméstica): apaga na hora o rascunho e a conversa do aparelho,
+ * sem esperar o React salvar, porque a página vai ser trocada logo em seguida.
+ */
+export function apagarRastros() {
+  try { sessionStorage.removeItem("quem-resolve:rascunho"); } catch { /* sem armazenamento */ }
+  try {
+    const local = JSON.parse(localStorage.getItem(CHAVE_LOCAL) ?? "{}");
+    localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ ...local, conversa: [] }));
+  } catch { /* idem */ }
 }
 
 const sessaoValida = (x: Sessao | null) => (x && new Date(x.expira_em).getTime() > Date.now() ? x : null);
@@ -79,8 +99,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!estado.carregado) return;
-    const { tema, meusReportes, conversa, sessao } = estado;
-    try { localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ tema, meusReportes, conversa })); } catch { /* idem */ }
+    const { tema, meusReportes, conversa, avisosSom, consentimentoVoz, sessao } = estado;
+    try { localStorage.setItem(CHAVE_LOCAL, JSON.stringify({ tema, meusReportes, conversa, avisosSom, consentimentoVoz })); } catch { /* idem */ }
     try {
       if (sessao) sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(sessao));
       else sessionStorage.removeItem(CHAVE_SESSAO);

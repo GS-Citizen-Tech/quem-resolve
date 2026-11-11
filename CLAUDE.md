@@ -25,7 +25,7 @@ Os módulos do parceiro entram na API trocando o mock pela implementação real,
 |---|---|
 | `docs/PRD.md` | PRD v0.4: problema, personas, requisitos, arquitetura, mapa disciplina → módulo, cronograma, decisões D01–D17 |
 | `docs/VISAO-GERAL-GS.md` | Resumo do que cada uma das 9 disciplinas exige |
-| `docs/CONTRATOS.md` | Contratos da API v0.5 (endpoints A a M, JSON de entrada e saída, dono de cada módulo) |
+| `docs/CONTRATOS.md` | Contratos da API v0.7 (endpoints A a M, JSON de entrada e saída, dono de cada módulo) |
 | `docs/PLANO-FRONT.md` | Plano do front v0.3: telas, componentes, estado, falhas, acessibilidade, barema da disciplina 04, fases F0–F5, decisões |
 | `docs/EXEMPLOS-FLUXO.md` | Jornada da Dona Cida (cidadão) e da Marina (gestão), com os desvios |
 | `docs/design-system/` | Cópia do design system (fonte da verdade: https://claude.ai/artifact/H7gZMbBkjfYbmLw9Qf1nLr). `README.md` = brand book + CSS Tailwind v4; `componentes/*.md` = regras de cada componente |
@@ -36,7 +36,7 @@ Os módulos do parceiro entram na API trocando o mock pela implementação real,
 ```
 api/   FastAPI · app/routers · app/schemas (Pydantic = contratos) · app/pipelines (lógica) · app/providers (LLM, visão, RAG, voz, dados, login)
        Tudo começa em "mock" (config.py, variáveis *_PROVIDER). Dados em memória + 120 ocorrências simuladas.
-       Testes: cd api && pytest   (46 testes: 26 da F0 + 8 da visão + 1 da F1 + 11 da reserva multimodal)
+       Testes: cd api && pytest   (48 testes: 26 da F0 + 8 da visão + 1 da F1 + 11 da reserva multimodal + 2 da F2)
        Visão real: app/providers/visao.py (YoloVisao, ONNX + onnxruntime, sem PyTorch) · modelo em api/modelos/rdd2022-n-r2.onnx + .json (classes, limiares)
 web/   Next.js 16 (App Router) + Tailwind v4 + lucide-react
        src/features (telas) · src/ui (componentes reutilizáveis) · src/state (AppState: tema, meus reportes, conversa, sessão do gestor) · src/providers (api.ts + tipos.ts)
@@ -61,12 +61,13 @@ web/   Next.js 16 (App Router) + Tailwind v4 + lucide-react
 - Respeitar `prefers-reduced-motion` e `prefers-reduced-transparency`.
 - Navegação do cidadão: **Reportar · Tirar dúvida · Meus reportes** (sem cadastro, sem "Conta").
 
-## Onde estamos (10/11/2026)
+## Onde estamos (11/11/2026)
 
 - ✅ Contratos v0.3, plano do front v0.3, design system aplicado.
 - ✅ **F0**: API mock completa (A–M) com testes; front com tokens, componentes base (`ui/`), cliente da API, estado, tela de início e vitrine `/componentes`. As outras telas são placeholders "Em construção".
 - ✅ **F1 · fluxo do cidadão** (10/11): `/reportar` numa rota só com etapas (captura com ditado, foto reduzida no aparelho e localização → analisando → emergência básica nível 1/2 ou aviso nível 3 → resultado com foto e caixas da visão, selo de confiança e "Não é isso" → confirmação → protocolo com "Isso ajudou?"), escolha manual com a base embutida quando a API cai, e `/meus-reportes` com status via `GET /ocorrencias/{id}`. Plano e resultado: `docs/PLANO-F1.md`. Prints: `docs/evidencias/f1/`. Casos de teste da IA: `docs/CASOS-TESTE-IA.md`.
-- ⏭️ **Próximo: F2** (emergência completa com saída rápida, assistente, voz, alerta OuviAí).
-- Depois: F3 (login + console com Plotly e 2 filtros, mapa, filas, frota), F4 (acabamento, deploy Vercel + Render, docker-compose, teste com 3 pessoas, README completo), F5 (vídeo de 5 min).
+- ✅ **F2 · segurança, assistente, voz e OuviAí** (11/11): `ui/TelaEmergencia` + `ui/SaidaRapida` (Esc ou botão → busca neutra do Google, apaga rascunho e conversa) no reporte, no chat e na voz; `/assistente` com chat (fontes citadas, "não sei" + 156, "Isso ajudou?", conversa salva) e "Falar" (consentimento, MediaRecorder até 60 s, transcrição, áudio ou voz do navegador, latência); `ui/AlertaSom` (consulta `/iot/eventos` a cada 5 s, faixa + vibração, sino no topo para ligar/desligar). Contrato v0.7 (`guardrail` na resposta do assistente/voz, `audio/mp4`). Plano e resultado: `docs/PLANO-F2.md`. Prints: `docs/evidencias/f2/`. RAG e voz ainda em mock (parceiro).
+- ⏭️ **Próximo: F3** (login do gestor + console com Plotly e 2 filtros, mapa, filas, frota).
+- Depois: F4 (acabamento, deploy Vercel + Render, docker-compose, teste com 3 pessoas, README completo), F5 (vídeo de 5 min).
 - ✅ **Visão Computacional (V4, 10/11)**: modelo YOLOv8n RDD2022 rodada 2 (mAP@50 0,584 no teste) ligado na API em `/visao/detectar`. Treino, métricas e plano em `../Materias/VC/` (PLANO-VC.md). V5 (10/11): `frota/processar_video.py` (vídeo ou pasta de fotos → detecção com o mesmo YoloVisao, borra rosto/pessoa/placa, rastreio por IoU, GPX ou trajeto simulado → `POST /frota/passagens`; ver `frota/README.md`). Relatório v1 em `../Materias/VC/relatorio/`. Reserva multimodal (10/11): `app/providers/visao_reserva.py` (Gemini Flash, `VISAO_RESERVA`), entra só na foto do cidadão quando o YOLO não acha nada; foto borrada antes (`app/providers/privacidade.py`, o mesmo Borrador da frota); contrato v0.6.
 - Repositório público: https://github.com/GS-Citizen-Tech/quem-resolve (org GS-Citizen-Tech, `origin`, branch `main`).

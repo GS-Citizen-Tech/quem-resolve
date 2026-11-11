@@ -21,9 +21,9 @@ let tokenGestor: string | null = null;
 /** O estado central chama isto ao fazer login/logout do gestor. */
 export function definirToken(t: string | null) { tokenGestor = t; }
 
-async function req<T>(caminho: string, init: RequestInit = {}): Promise<T> {
+async function req<T>(caminho: string, init: RequestInit = {}, limiteMs = TIMEOUT_MS): Promise<T> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), limiteMs);
   const headers = new Headers(init.headers);
   if (tokenGestor) headers.set("Authorization", `Bearer ${tokenGestor}`);
   let r: Response;
@@ -95,9 +95,10 @@ export const api = {
   perguntar: (pergunta: string, historico: Mensagem[]) => req<RespostaAssistente>("/assistente/perguntar", json({ pergunta, historico })),
   conversarPorVoz: (audio: Blob, historico: Mensagem[]) => {
     const fd = new FormData();
-    fd.append("audio", audio, "fala.webm");
+    const ext = audio.type.includes("mp4") ? "mp4" : audio.type.includes("ogg") ? "ogg" : audio.type.includes("wav") ? "wav" : "webm";
+    fd.append("audio", audio, `fala.${ext}`);
     fd.append("historico", JSON.stringify(historico));
-    return req<RespostaVoz>("/voz/conversar", { method: "POST", body: fd });
+    return req<RespostaVoz>("/voz/conversar", { method: "POST", body: fd }, 30_000); // STT + RAG + TTS
   },
 
   // I · frota · J · IoT

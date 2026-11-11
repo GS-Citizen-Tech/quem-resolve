@@ -6,7 +6,7 @@ export function Marca({ tamanho = 32, comNome = true }: { tamanho?: number; comN
       <img src="/marca/qr-marca.svg" alt="" width={tamanho} height={tamanho} className="block dark:hidden hc:hidden" />
       <img src="/marca/qr-marca-escuro.svg" alt="" width={tamanho} height={tamanho} className="hidden dark:block hc:hidden" />
       <img src="/marca/qr-marca-preto.svg" alt="" width={tamanho} height={tamanho} className="hidden hc:block" />
-      {comNome ? <span className="text-[17px]">Quem Resolve?</span> : <span className="sr-only">Quem Resolve?</span>}
+      {comNome ? <span className="text-[17px] max-[419px]:sr-only">Quem Resolve?</span> : <span className="sr-only">Quem Resolve?</span>}
     </span>
   );
 }

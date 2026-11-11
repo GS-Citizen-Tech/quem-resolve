@@ -1,4 +1,4 @@
-// Espelho dos contratos da API (docs/CONTRATOS.md v0.5 e api/app/schemas). Mudou lá, muda aqui.
+// Espelho dos contratos da API (docs/CONTRATOS.md v0.7 e api/app/schemas). Mudou lá, muda aqui.
 
 export type Emergencia = "sim" | "nao" | "depende";
 export type Origem = "cidadao" | "frota" | "ambos";
@@ -69,7 +69,10 @@ export interface Metricas {
 
 // G · Assistente RAG / H · Voz
 export interface Mensagem { papel: "cidadao" | "assistente"; texto: string }
-export interface RespostaAssistente { id: string; resposta: string; fontes: Fonte[]; sem_fonte: boolean; fora_do_tema: boolean; modelo: string }
+export interface RespostaAssistente {
+  id: string; resposta: string; fontes: Fonte[]; sem_fonte: boolean; fora_do_tema: boolean; modelo: string;
+  guardrail?: GuardrailResultado | null; // v0.7: nível > 0 (emergência ou risco)
+}
 export interface Latencias { stt_ms: number; llm_ms: number; tts_ms: number; total_ate_fala_ms: number }
 export interface RespostaVoz { transcricao: string; resposta: RespostaAssistente; texto_falado: string; audio_base64: string | null; latencias: Latencias }
 

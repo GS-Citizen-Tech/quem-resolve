@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from .base import Fonte
+from .guardrail import GuardrailResultado
 
 
 class Mensagem(BaseModel):
@@ -24,3 +25,5 @@ class RespostaAssistente(BaseModel):
     sem_fonte: bool = Field(description="True quando não há base para responder (o assistente diz que não sabe)")
     fora_do_tema: bool = False
     modelo: str
+    guardrail: GuardrailResultado | None = Field(
+        default=None, description="Resultado do guardrail quando nível > 0 (v0.7): o front mostra a tela de emergência ou o aviso de risco")

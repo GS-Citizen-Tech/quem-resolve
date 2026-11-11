@@ -82,3 +82,66 @@ export function useFala() {
   const parar = useCallback(() => { window.speechSynthesis?.cancel(); setFalando(false); }, []);
   return { suportado, falando, falar, parar };
 }
+
+export type FaseGravacao = "parado" | "pedindo" | "gravando" | "negado" | "sem_suporte";
+const temGravador = () => typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+/** Formatos em ordem de preferência: webm/opus (Chrome, Android, Firefox) e mp4 (iPhone/Safari). */
+const FORMATOS = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+
+/** Grava a fala do microfone (MediaRecorder) até `maxSegundos` e entrega o áudio em `aoTerminar`. */
+export function useGravador(aoTerminar: (audio: Blob) => void, maxSegundos = 60) {
+  const suportado = useSuporte(temGravador);
+  const [fase, setFase] = useState<FaseGravacao>("parado");
+  const [segundos, setSegundos] = useState(0);
+  const rec = useRef<MediaRecorder | null>(null);
+  const relogio = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cb = useRef(aoTerminar);
+  useEffect(() => { cb.current = aoTerminar; }, [aoTerminar]);
+
+  const limpar = useCallback(() => {
+    if (relogio.current) clearInterval(relogio.current);
+    relogio.current = null;
+    rec.current?.stream.getTracks().forEach((t) => t.stop());
+    rec.current = null;
+  }, []);
+  useEffect(() => () => limpar(), [limpar]);
+
+  const parar = useCallback(() => {
+    if (rec.current && rec.current.state !== "inactive") rec.current.stop();
+  }, []);
+
+  const iniciar = useCallback(async () => {
+    if (!temGravador()) { setFase("sem_suporte"); return; }
+    setFase("pedindo");
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setFase("negado");
+      return;
+    }
+    const mimeType = FORMATOS.find((f) => MediaRecorder.isTypeSupported(f));
+    const r = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    const partes: Blob[] = [];
+    r.ondataavailable = (e) => { if (e.data.size) partes.push(e.data); };
+    r.onstop = () => {
+      const tipo = (r.mimeType || mimeType || "audio/webm").split(";")[0];
+      limpar();
+      setFase("parado");
+      setSegundos(0);
+      if (partes.length) cb.current(new Blob(partes, { type: tipo }));
+    };
+    rec.current = r;
+    r.start();
+    setSegundos(0);
+    setFase("gravando");
+    const inicio = Date.now();
+    relogio.current = setInterval(() => {
+      const s = Math.floor((Date.now() - inicio) / 1000);
+      setSegundos(s);
+      if (s >= maxSegundos) r.stop();
+    }, 250);
+  }, [limpar, maxSegundos]);
+
+  return { suportado, fase, segundos, iniciar, parar };
+}

@@ -182,3 +182,18 @@ def test_obter_ocorrencia_por_id(client):
     assert client.get(f"/ocorrencias/{o['id']}").json()["status"] == "resolvida"
     assert client.get("/ocorrencias/nao-existe").status_code == 404
     assert client.get("/ocorrencias/metricas").status_code == 200
+
+
+def test_assistente_devolve_guardrail_na_emergencia(client):
+    r = client.post("/assistente/perguntar", json={"pergunta": "a casa do vizinho está pegando fogo", "historico": []}).json()
+    assert r["guardrail"]["nivel"] == 1 and r["guardrail"]["canal_principal"]["numero"] == "193"
+    r = client.post("/assistente/perguntar", json={"pergunta": "meu marido me bate, o que eu faço?", "historico": []}).json()
+    assert r["guardrail"]["saida_rapida"] is True
+    r = client.post("/assistente/perguntar", json={"pergunta": "quem conserta buraco na rua?", "historico": []}).json()
+    assert r["guardrail"] is None
+
+
+def test_voz_aceita_audio_do_iphone(client):
+    r = client.post("/voz/conversar", files={"audio": ("fala.mp4", b"\x00" * 1000, "audio/mp4")})
+    assert r.status_code == 200 and r.json()["transcricao"]
+    assert client.post("/voz/conversar", files={"audio": ("x.txt", b"oi", "text/plain")}).status_code == 415

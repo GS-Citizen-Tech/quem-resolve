@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **0.5** · 10/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **0.7** · 11/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -329,6 +329,7 @@ Saída:
   "modelo": "gemini-x + bge-m3"
 }
 ```
+- `guardrail` (v0.7, opcional): vem preenchido quando o guardrail dispara (nível > 0), no mesmo formato de B. Nível 1 ou 2: `resposta` é só o encaminhamento e o front abre a tela de emergência (com saída rápida se `saida_rapida`). Nível 3: a resposta do RAG vem normal e o front mostra o aviso de risco junto. Nível 0: `null`.
 - Sem documento recuperado → `sem_fonte: true` e a resposta diz que não sabe e indica o SP156 (RNF07).
 - Pergunta fora do tema → `fora_do_tema: true` e uma recusa educada (RF67).
 - O guardrail roda **antes** do RAG. Se disparar nível 1 ou 2, o RAG nem é chamado.
@@ -337,7 +338,7 @@ Saída:
 
 ## H. Assistente de voz (parceiro)
 
-`POST /voz/conversar` · `multipart/form-data`, campo `audio` (webm, wav ou mp3, até 1 minuto) + campo opcional `historico` (JSON em texto)
+`POST /voz/conversar` · `multipart/form-data`, campo `audio` (webm, wav, mp3, ogg ou mp4/m4a, até 1 minuto; mp4 é o que o iPhone grava, v0.7) + campo opcional `historico` (JSON em texto)
 
 Saída:
 ```json
@@ -349,7 +350,7 @@ Saída:
   "latencias": { "stt_ms": 820.0, "llm_ms": 1900.0, "tts_ms": 640.0, "total_ate_fala_ms": 3360.0 }
 }
 ```
-- `resposta` é exatamente o formato do assistente RAG (G): a voz reaproveita o mesmo cérebro.
+- `resposta` é exatamente o formato do assistente RAG (G), inclusive o campo `guardrail`: a voz reaproveita o mesmo cérebro.
 - `texto_falado`: versão adaptada para fala (frases curtas, sem markdown, siglas pronunciáveis).
 - `audio_base64 = null` → o front usa a voz do navegador como alternativa.
 - `latencias` alimentam o relatório de PLN (latência em 10 conversas).
@@ -491,3 +492,4 @@ Saída:
 | 0.4 | 10/11/2026 | Ian | Visão real (YOLOv8n RDD2022 em ONNX): limiar 0,24, ordem por confiança, EXIF, erro `422` (formato da resposta não mudou) |
 | 0.5 | 10/11/2026 | Ian | `GET /ocorrencias/{id}` (E) para "Meus reportes" acompanhar o status |
 | 0.6 | 10/11/2026 | Ian | Visão (C): reserva multimodal (Gemini Flash) quando o YOLO não acha nada; `Deteccao` ganha `origem` e `descricao`, `bbox` vira opcional |
+| 0.7 | 11/11/2026 | Ian | Assistente (G) e voz (H): campo `guardrail` na resposta quando o guardrail dispara; voz aceita `audio/mp4` (iPhone). Nada muda para o RAG e a voz do parceiro |

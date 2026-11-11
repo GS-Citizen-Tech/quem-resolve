@@ -74,7 +74,7 @@ const shot = (page, nome) => page.screenshot({ path: `${OUT}/${nome}.png`, fullP
     await page.getByLabel('Descreva o problema').fill('A casa do vizinho está pegando fogo agora');
     await page.getByRole('button', { name: 'Usar minha localização' }).click();
     await page.getByRole('button', { name: 'Descobrir quem resolve' }).click();
-    await page.getByText(/emergência|ajuda especializada/).first().waitFor({ timeout: 20000 });
+    await page.getByRole('heading', { name: /emergência|ajuda especializada/ }).waitFor({ timeout: 20000 });
     await shot(page, `3-${t}-emergencia`);
     console.log(tema, 'rascunho guardado na emergência?', await page.evaluate(() => sessionStorage.getItem('quem-resolve:rascunho')));
     await ctx.close();

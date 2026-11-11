@@ -1,6 +1,6 @@
 # Plano da F2: segurança, assistente, voz e OuviAí
 
-> Versão **0.1** · 11/11/2026 · Ian · **Para aprovar antes de codar.**
+> Versão **1.0** · 11/11/2026 · Ian · **Aprovado e implementado** (ver seção 10).
 > Base: `PLANO-FRONT.md` (3.1, 7, 8 e 11), `CONTRATOS.md` v0.6 (B, G, H, J, L) e o que ficou pronto na F1.
 > Assistente (RAG) e voz são do parceiro: o front é feito agora contra os **mocks** da API e passa a usar o módulo real sem mudar nada, só trocando o provider.
 
@@ -113,3 +113,39 @@ Mudanças pequenas na tela inicial e no topo:
 
 - A pasta agora se chama `Quem_resolve` e já tem um repositório Git apontando para `GS-Citizen-Tech/quem-resolve`. Posso trabalhar direto nele, com uma branch e um pull request por fase, se você quiser. Até lá, continuo copiando os arquivos para a pasta.
 - A reserva multimodal (v0.6) já está no front pela thread de VC: `FotoComDeteccoes` mostra a descrição quando a detecção não tem caixa. A F2 não mexe nisso.
+
+## 10. Decisões e resultado (11/11)
+
+Ian aprovou os 4 pontos: contrato v0.7; "Falar" abre a conversa por voz; "Sair rápido" vai para a busca neutra do Google; avisos do OuviAí ligados por padrão.
+
+O que foi feito:
+- **API (contrato v0.7):** `guardrail` na resposta do assistente e da voz (nível > 0); a voz aceita `audio/mp4`, `x-m4a` e `aac`; o chat e a voz também registram o guardrail anônimo. São 48 testes (2 novos).
+- **Front:**
+  - `ui/TelaEmergencia` + `ui/SaidaRapida` (reporte, chat e voz). `features/reportar/Emergencia.tsx` só reexporta.
+  - `features/assistente/` (Assistente, RespostaBalao, PainelVoz).
+  - `ui/Conversa` (Balao, FontesCitadas), `ui/AlertaSom` (alerta + botão no topo) e `useGravador` em `ui/useVoz`.
+  - Estado: `conversa` com a resposta completa, `avisosSom` e `consentimentoVoz`.
+  - Timeout de 30 s na voz.
+- **Testes:** Playwright, 8 caminhos nos 3 temas, no celular e no desktop. Os caminhos são:
+  - chat vazio;
+  - chat com fonte;
+  - chat sem fonte com "Isso ajudou?";
+  - conversa que continua depois de recarregar;
+  - chat fora do ar;
+  - emergência pelo chat (não guarda a mensagem);
+  - violência doméstica com Esc → Google, conversa apagada;
+  - voz: consentimento, gravação, resposta e microfone negado;
+  - OuviAí: alerta e "Desligar avisos".
+
+  São 29 prints em `docs/evidencias/f2/`, gerados pelo script `f2.playwright.js`. A suíte da F1 continua passando.
+
+Ajustes em relação ao plano:
+- O botão "Sair rápido" fica no topo da tela de emergência e acompanha a rolagem, em vez de ficar solto por cima de tudo, porque cobria o título.
+- No celular estreito (menos de 420 px), o nome "Quem Resolve?" some da barra do topo (fica só o símbolo) para caber o botão de avisos. Leitores de tela continuam lendo o nome.
+- A latência aparece em ms quando é menor que 1 s.
+
+Limites conhecidos (vão para o README):
+- O navegador só **vibra depois que a pessoa tocou na página** pelo menos uma vez. Antes disso, o alerta aparece sem vibrar.
+- O "Sair rápido" troca a página atual, mas as páginas abertas **antes** no mesmo app continuam no histórico do navegador. O texto da tela não promete mais do que isso.
+- O chat e a voz estão nos **mocks** até o parceiro ligar o RAG e a voz reais. A voz do mock sempre transcreve a mesma frase e não devolve áudio (o app usa a voz do navegador).
+

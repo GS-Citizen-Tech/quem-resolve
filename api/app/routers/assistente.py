@@ -5,14 +5,16 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import TypeAdapter, ValidationError
 
 from app.pipelines import guardrail
+from app.providers import repositorio
 from app.providers.rag import obter_rag
 from app.providers.voz import obter_voz
 from app.schemas.assistente import Mensagem, PerguntaEntrada, RespostaAssistente
+from app.schemas.guardrail import GuardrailResultado
 from app.schemas.voz import Latencias, RespostaVoz
 
 router = APIRouter(tags=["assistente"])
 
-TIPOS_AUDIO = {"audio/webm", "audio/wav", "audio/x-wav", "audio/mpeg", "audio/ogg"}
+TIPOS_AUDIO = {"audio/webm", "audio/wav", "audio/x-wav", "audio/mpeg", "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/aac"}  # mp4/m4a = iPhone (v0.7)
 MAX_AUDIO = 2 * 1024 * 1024  # ~1 min de webm/opus
 _HIST = TypeAdapter(list[Mensagem])
 
@@ -24,18 +26,28 @@ def para_fala(texto: str) -> str:
 
 @router.post("/assistente/perguntar", response_model=RespostaAssistente)
 def perguntar(entrada: PerguntaEntrada):
-    g = guardrail.avaliar(entrada.pergunta)
-    if not g.pode_continuar:  # nível 1 ou 2: o RAG nem é chamado
+    return _responder(entrada.pergunta, entrada.historico)
+
+
+def _responder(texto: str, historico: list[Mensagem]) -> RespostaAssistente:
+    """Guardrail antes do RAG. Nível 1 ou 2: o RAG nem é chamado. Nível > 0 vai junto na resposta (v0.7)."""
+    g: GuardrailResultado = guardrail.avaliar(texto)
+    if g.nivel:
+        repositorio.registrar_guardrail(g.nivel, g.tipo, g.camada)
+    if not g.pode_continuar:
         return RespostaAssistente(resposta=f"Isso parece uma emergência. Ligue {g.canal_principal.numero}, {g.canal_principal.nome}.",
-                                  fontes=[], sem_fonte=True, modelo="guardrail")
-    return obter_rag().responder(entrada.pergunta, entrada.historico)
+                                  fontes=[], sem_fonte=True, modelo="guardrail", guardrail=g)
+    resposta = obter_rag().responder(texto, historico[-20:])
+    if g.nivel:
+        resposta.guardrail = g
+    return resposta
 
 
 @router.post("/voz/conversar", response_model=RespostaVoz)
 async def conversar(audio: UploadFile = File(...), historico: str | None = Form(default=None)):
     """STT → (guardrail) → RAG → TTS. O áudio é descartado após a transcrição (RF66)."""
     if (audio.content_type or "").split(";")[0] not in TIPOS_AUDIO:
-        raise HTTPException(415, "Envie o áudio em webm, wav, mp3 ou ogg.")
+        raise HTTPException(415, "Envie o áudio em webm, wav, mp3, ogg ou mp4.")
     dados = await audio.read()
     if len(dados) > MAX_AUDIO:
         raise HTTPException(413, "O áudio passa do limite de 1 minuto.")
@@ -48,12 +60,7 @@ async def conversar(audio: UploadFile = File(...), historico: str | None = Form(
     transcricao = voz.transcrever(dados)
     del dados  # o áudio não é guardado
     t1 = time.perf_counter()
-    g = guardrail.avaliar(transcricao)
-    if not g.pode_continuar:
-        resposta = RespostaAssistente(resposta=f"Isso parece uma emergência. Ligue {g.canal_principal.numero}, {g.canal_principal.nome}.",
-                     fontes=[], sem_fonte=True, modelo="guardrail")
-    else:
-        resposta = obter_rag().responder(transcricao, hist[-20:])
+    resposta = _responder(transcricao, hist)
     t2 = time.perf_counter()
     falado = para_fala(resposta.resposta)
     audio_b64 = voz.sintetizar(falado)
