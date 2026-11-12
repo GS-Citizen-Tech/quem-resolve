@@ -23,7 +23,7 @@ YOLO_LIMIAR = float(os.environ["YOLO_LIMIAR"]) if os.getenv("YOLO_LIMIAR") else 
 
 # Reserva multimodal da foto do cidadão: entra quando o YOLO não acha nada (fio, lixo, poste, árvore, alagamento...).
 VISAO_RESERVA = os.getenv("VISAO_RESERVA", "off")                    # off | mock | gemini
-VISAO_RESERVA_MODELO = os.getenv("VISAO_RESERVA_MODELO", "gemini-3.5-flash,gemini-3.8-flash")  # lista: tenta o próximo se o primeiro estiver sobrecarregado
+VISAO_RESERVA_MODELO = os.getenv("VISAO_RESERVA_MODELO", "gemini-3.5-flash,gemini-3.8-flash,gemini-3.5-flash-lite")  # lista: tenta o próximo se um estiver sobrecarregado ou sem cota
 VISAO_RESERVA_CHAVE = os.getenv("VISAO_RESERVA_CHAVE", "") or os.getenv("LLM_API_KEY", "")  # vazio = usa a chave do LLM
 VISAO_RESERVA_TIMEOUT = float(os.getenv("VISAO_RESERVA_TIMEOUT", "8"))
 
@@ -33,7 +33,7 @@ LIMIAR_IOT = float(os.getenv("LIMIAR_IOT", "0.7"))
 SEED_OCORRENCIAS = int(os.getenv("SEED_OCORRENCIAS", "120"))
 
 # Login de demonstração do gestor: "usuario:senha:orgao_id:Nome", separados por vírgula.
-GESTORES = _lista("GESTORES", "marina:demo-123:subprefeitura:Marina")
+GESTORES = _lista("GESTORES", "marina:demo-123:subprefeitura:Marina,joao:demo-123:sabesp:João")
 AUTH_SEGREDO = os.getenv("AUTH_SEGREDO", "troque-este-segredo-em-producao")
 AUTH_HORAS = int(os.getenv("AUTH_HORAS", "8"))
 ROBO_CHAVE = os.getenv("ROBO_CHAVE", "")  # chave do robô de RPA (vazia = robô desligado)

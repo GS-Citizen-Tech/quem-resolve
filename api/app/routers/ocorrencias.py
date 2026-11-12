@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.pipelines import metricas, ocorrencias
 from app.providers import base_conhecimento as base
 from app.providers import repositorio
-from app.providers.auth import exigir_gestor_ou_robo
+from app.providers.auth import exigir_gestor, exigir_gestor_ou_robo
 from app.schemas.metricas import Metricas
 from app.schemas.ocorrencia import AtualizarStatus, Ocorrencia, OcorrenciaCriar
 
@@ -21,13 +21,14 @@ def criar(dados: OcorrenciaCriar):
 
 @router.get("", response_model=list[Ocorrencia])
 def listar(categoria: str | None = None, responsavel: str | None = None, origem: str | None = None,
-           status: str | None = None, limite: int = 500):
-    """Console da gestão e RPA (o robô de e-mail busca status=pendente_envio)."""
+           status: str | None = None, limite: int = 500, _: dict = Depends(exigir_gestor_ou_robo)):
+    """Console da gestão e RPA (o robô de e-mail busca status=pendente_envio). Exige login (v0.8)."""
     return ocorrencias.filtrar(categoria, responsavel, origem, status)[:limite]
 
 
 @router.get("/metricas", response_model=Metricas)
-def obter_metricas(categoria: str | None = None, responsavel: str | None = None, origem: str | None = None):
+def obter_metricas(categoria: str | None = None, responsavel: str | None = None, origem: str | None = None,
+                   _: dict = Depends(exigir_gestor)):
     return metricas.calcular(ocorrencias.filtrar(categoria, responsavel, origem))
 
 
@@ -46,6 +47,8 @@ def atualizar_status(oid: str, dados: AtualizarStatus, quem: dict = Depends(exig
     o = repositorio.ocorrencia(oid)
     if not o:
         raise HTTPException(404, "Ocorrência não encontrada.")
+    if quem["u"] != "robo-rpa" and quem.get("o") != o.responsavel_id:
+        raise HTTPException(403, "Esta ocorrência é de outro órgão. Você pode ver, mas não alterar.")
     if dados.categoria_final is not None:
         if quem["u"] == "robo-rpa":
             raise HTTPException(403, "O robô não pode reclassificar.")

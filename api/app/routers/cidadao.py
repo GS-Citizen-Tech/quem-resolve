@@ -32,9 +32,12 @@ async def detectar(foto: UploadFile = File(...)):
     if len(dados) > MAX_IMAGEM:
         raise HTTPException(413, "A foto passa de 8 MB.")
     try:
-        return detectar_cidadao(dados)
+        r = detectar_cidadao(dados)
     except ImagemInvalida:
         raise HTTPException(422, "Não consegui ler a foto. Tente tirar outra.")
+    origem = "multimodal" if any(d.origem == "multimodal" for d in r.deteccoes) else ("yolo" if r.deteccoes else "nenhuma")
+    repositorio.registrar_visao(r.latencia_ms, origem)  # só números, para a tela de qualidade (v0.8)
+    return r
 
 
 @router.post("/reportes/analisar", response_model=AnaliseReporte)

@@ -27,3 +27,4 @@ class ResultadoIngestao(BaseModel):
     passagem_id: str
     novas_ocorrencias: int
     associadas_a_existentes: int
+    possivelmente_resolvidas: int = Field(default=0, description="Problemas abertos por onde o ônibus passou sem vê-los de novo (v0.8)")

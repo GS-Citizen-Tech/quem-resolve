@@ -14,6 +14,7 @@ from app.routers import assistente, base, cidadao, conta, integracoes, ocorrenci
 async def lifespan(_: FastAPI):
     if not repositorio.ocorrencias() and config.SEED_OCORRENCIAS:
         simulacao.gerar(config.SEED_OCORRENCIAS)
+        simulacao.gerar_frota()
     yield
 
 

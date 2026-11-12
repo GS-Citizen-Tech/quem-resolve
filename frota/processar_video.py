@@ -225,6 +225,17 @@ def desenhar(img, pares, fps_atual: float, n_trilhas: int, borrados: int, gps_tx
     return img
 
 
+def encaixar(img, tam):
+    """Redimensiona mantendo a proporção e completa com preto, para caber no tamanho fixo do vídeo."""
+    w, h = tam
+    r = min(w / img.shape[1], h / img.shape[0])
+    nova = cv2.resize(img, (max(1, round(img.shape[1] * r)), max(1, round(img.shape[0] * r))), interpolation=cv2.INTER_AREA)
+    tela = np.zeros((h, w, 3), dtype=img.dtype)
+    y0, x0 = (h - nova.shape[0]) // 2, (w - nova.shape[1]) // 2
+    tela[y0:y0 + nova.shape[0], x0:x0 + nova.shape[1]] = nova
+    return tela
+
+
 def recorte_data_url(quadro, bbox, borrador: Borrador) -> str:
     """Recorte do dano com margem, já borrado, reduzido e em data URL (o protótipo não tem storage de fotos)."""
     h, w = quadro.shape[:2]
@@ -281,11 +292,13 @@ def processar(args) -> dict:
         # 3) vídeo anotado
         fps_atual = 1000 / np.mean(tempos_quadro[-15:])
         lat, lon = gps.em(t)
-        anot = desenhar(img, pares, fps_atual, sum(tr.vistos >= args.min_vistos for tr in rast.todas()), n_borrados, f"{lat:.5f}, {lon:.5f}{' (sim.)' if gps.simulado else ''}")
+        anot = desenhar(img, pares, fps_atual, sum(tr.vistos >= (args.min_vistos if info["tipo"] == "video" else 1) for tr in rast.todas()), n_borrados, f"{lat:.5f}, {lon:.5f}{' (sim.)' if gps.simulado else ''}")
         if escritor is None:
             fps_saida = args.fps_seq if info["tipo"] != "video" else min(args.qps, info["fps_origem"])
-            escritor = cv2.VideoWriter(str(saida / "video_anotado.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps_saida,
-                                       (anot.shape[1], anot.shape[0]))
+            tam_video = (anot.shape[1], anot.shape[0])
+            escritor = cv2.VideoWriter(str(saida / "video_anotado.mp4"), cv2.VideoWriter_fourcc(*"mp4v"), fps_saida, tam_video)
+        if (anot.shape[1], anot.shape[0]) != tam_video:
+            anot = encaixar(anot, tam_video)  # fotos de tamanhos diferentes: o vídeo descartaria o quadro em silêncio
         escritor.write(anot)
         if args.limite and n_proc >= args.limite:
             break

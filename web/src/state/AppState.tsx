@@ -94,6 +94,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const s = sessionStorage.getItem(CHAVE_SESSAO);
       dados.sessao = s ? sessaoValida(JSON.parse(s)) : null;
     } catch { dados.sessao = null; }
+    // O token precisa estar pronto antes das telas do console buscarem dados (os efeitos dos filhos rodam antes deste).
+    definirToken(dados.sessao?.token ?? null);
     despachar({ tipo: "carregar", dados });
   }, []);
 

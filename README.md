@@ -45,4 +45,4 @@ npm run dev                      # http://localhost:3000
 ```
 
 Páginas prontas na F0: `/` (início do cidadão) e `/componentes` (vitrine dos componentes nos 3 temas).
-Login de demonstração do gestor (API): `marina` / `demo-123`.
+Login de demonstração do gestor (API): `marina` / `demo-123` (Subprefeitura) e `joao` / `demo-123` (Sabesp).

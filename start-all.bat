@@ -22,12 +22,11 @@ echo [API] Conferindo dependencias (na primeira vez depois de uma atualizacao po
 if not exist "api\.env" copy "api\.env.example" "api\.env" >nul
 
 rem ---------- Front ----------
-if not exist "web\node_modules" (
-  echo [WEB] Instalando dependencias (so na primeira vez, pode demorar^)...
-  pushd web
-  call npm install || (popd & echo [ERRO] Falha no npm install. & pause & exit /b 1)
-  popd
-)
+rem Sempre confere as dependencias (rapido quando ja estao instaladas; pega pacotes novos, como o Plotly do console)
+echo [WEB] Conferindo dependencias (na primeira vez depois de uma atualizacao pode demorar, nao feche^)...
+pushd web
+call npm install --no-audit --no-fund || (popd & echo [ERRO] Falha no npm install. & pause & exit /b 1)
+popd
 if not exist "web\.env.local" copy "web\.env.example" "web\.env.local" >nul
 
 rem ---------- Subir os dois ----------

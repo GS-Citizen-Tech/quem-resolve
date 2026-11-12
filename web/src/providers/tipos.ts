@@ -1,4 +1,4 @@
-// Espelho dos contratos da API (docs/CONTRATOS.md v0.7 e api/app/schemas). Mudou lá, muda aqui.
+// Espelho dos contratos da API (docs/CONTRATOS.md v0.8 e api/app/schemas). Mudou lá, muda aqui.
 
 export type Emergencia = "sim" | "nao" | "depende";
 export type Origem = "cidadao" | "frota" | "ambos";
@@ -77,7 +77,10 @@ export interface Latencias { stt_ms: number; llm_ms: number; tts_ms: number; tot
 export interface RespostaVoz { transcricao: string; resposta: RespostaAssistente; texto_falado: string; audio_base64: string | null; latencias: Latencias }
 
 // I · Frota
-export interface PassagemResumo { linha_onibus: string; inicio: string; fim: string; trajeto: [number, number][]; deteccoes: number; fps: number | null }
+export interface PassagemResumo {
+  linha_onibus: string; inicio: string; fim: string; trajeto: [number, number][]; deteccoes: number; fps: number | null;
+  possivelmente_resolvidas?: number; // v0.8
+}
 
 // J · IoT OuviAí
 export interface EventoSom {
@@ -89,6 +92,18 @@ export interface EventoSom {
 export interface Saude { status: string; modulos: Record<string, string> }
 export interface FeedbackEntrada { alvo: "reporte" | "assistente"; id: string; util: boolean; comentario?: string }
 export interface Sessao { token: string; nome: string; orgao_id: string; expira_em: string }
+
+// N · Qualidade da IA (v0.8, só gestor)
+export interface QualidadeVisao { chamadas: number; latencia_media_ms: number | null; latencia_p95_ms: number | null; por_origem: Record<string, number> }
+export interface QualidadeClassificacao {
+  total: number; confianca_media: number | null; baixa_confianca: number; corrigidas_pelo_cidadao: number; corrigidas_pelo_gestor: number;
+}
+export interface QualidadeFeedback { util: number; total: number }
+export interface QualidadeGuardrail { nivel: number; total: number; nao_e_emergencia: number }
+export interface Qualidade {
+  modulos: Record<string, string>; visao: QualidadeVisao; classificacao: QualidadeClassificacao;
+  feedback: Record<string, QualidadeFeedback>; guardrail: QualidadeGuardrail[];
+}
 
 /** Faixas do selo de confiança (design system): alta ≥ 0,8 · média 0,5–0,79 · baixa < 0,5. */
 export type NivelConfianca = "alta" | "media" | "baixa";

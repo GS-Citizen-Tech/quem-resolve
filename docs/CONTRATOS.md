@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **0.7** · 11/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **0.8** · 12/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -43,6 +43,7 @@ Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é
 | K | Saúde da API | `GET /health` | — | Ian | Todos (mostra o que é mock e o que é real) |
 | L | Feedback do cidadão | `POST /feedback` | Front End (HITL) | Ian | Front, qualidade da IA |
 | M | Login do gestor | `POST /auth/login` | Front End (perfis) | Ian | Console da gestão |
+| N | Qualidade da IA | `GET /qualidade` | Front End + Governança | Ian | Console (tela Qualidade) |
 
 > **Computação Quântica** não tem endpoint: é roadmap sem código. Os dados de `GET /ocorrencias` e `GET /frota/passagens` servem de exemplo real do gargalo (quais ônibus equipar, como priorizar a fila).
 
@@ -170,7 +171,7 @@ Saída:
 - `bbox` passa a ser **opcional**: o multimodal pode devolver `null` quando o problema ocupa a foto toda. O front mostra só a legenda.
 - `descricao`: frase curta do multimodal. `null` no YOLO.
 - A confiança do multimodal é um palpite do modelo, não calibrado. Ela é limitada a `LIMIAR_CONFIANCA − 0,01`, então sempre pede confirmação.
-- `VISAO_RESERVA_MODELO` aceita uma lista (padrão `gemini-3.5-flash,gemini-3.8-flash`): com 429 ou 5xx tenta o próximo, dentro dos mesmos 8 s.
+- `VISAO_RESERVA_MODELO` aceita uma lista (padrão `gemini-3.5-flash,gemini-3.8-flash,gemini-3.5-flash-lite`): com 429 (sem cota) ou 5xx tenta o próximo, dentro dos mesmos 8 s. No plano gratuito cada modelo aceita cerca de 20 pedidos por dia.
 - Se o multimodal não vê problema, ou falha (sem chave, timeout de 8 s, resposta inválida), volta `deteccoes = []` como antes.
 - A frota (`I`) nunca usa a reserva.
 
@@ -269,9 +270,9 @@ Saída (`Ocorrencia`):
 - `prioridade`: 1 a 5 (risco da categoria + recorrência + frota e cidadão juntos).
 - Duplicata: mesma categoria a até 50 m de uma ocorrência aberta → mesmo `grupo_duplicata_id`.
 
-`GET /ocorrencias?categoria=&responsavel=&origem=&status=&limite=500` → lista de `Ocorrencia`
+`GET /ocorrencias?categoria=&responsavel=&origem=&status=&limite=500` → lista de `Ocorrencia` · **exige login do gestor** (ou a chave do robô de RPA). Sem login → `401`. A lista tem descrição e localização de quem reportou (LGPD).
 
-`GET /ocorrencias/{id}` → uma `Ocorrencia` (`404` se não existir). Usado em "Meus reportes" para mostrar o status atual sem baixar a lista inteira.
+`GET /ocorrencias/{id}` → uma `Ocorrencia` (`404` se não existir). **Continua aberto** (o id é um UUID impossível de adivinhar). Usado em "Meus reportes" para mostrar o status atual sem baixar a lista inteira.
 
 `PATCH /ocorrencias/{id}/status` · **exige login do gestor** (ou a chave do robô de RPA, ver M)
 ```json
@@ -279,6 +280,7 @@ Saída (`Ocorrencia`):
 ```
 - `categoria_final` (opcional): o gestor **reclassifica** a ocorrência (human-in-the-loop do gestor). O `responsavel_id` é recalculado e `corrigida_pelo_gestor` passa a `true`.
 - `status` e `categoria_final` podem vir juntos ou separados; pelo menos um deles é obrigatório.
+- **Órgão (v0.8):** o gestor vê todas as filas, mas só altera ocorrências do **próprio órgão** (`orgao_id` do login = `responsavel_id` da ocorrência). Outro órgão → `403` "Esta ocorrência é de outro órgão. Você pode ver, mas não alterar." O robô de RPA altera qualquer uma.
 
 > **Integração com o RPA (parceiro):** o robô busca `GET /ocorrencias?status=pendente_envio`, monta o e-mail para o órgão (`responsavel_id`) e marca `PATCH .../status` como `enviada`. Se o envio falhar, não muda o status e registra no log (caminho seguro em falhas).
 
@@ -286,7 +288,7 @@ Saída (`Ocorrencia`):
 
 ## F. Métricas do console
 
-`GET /ocorrencias/metricas?categoria=&responsavel=&origem=` (os mesmos filtros da lista)
+`GET /ocorrencias/metricas?categoria=&responsavel=&origem=` (os mesmos filtros da lista) · **exige login do gestor** (v0.8)
 
 ```json
 {
@@ -389,6 +391,8 @@ Saída:
 - `recorte_url` já vem **borrado** (rostos e placas). Vídeo bruto não entra na API.
 - `fps_processamento` alimenta o relatório de VC. A carga (N ônibus × vídeo) é a mesma simulada no iSPD (Cluster).
 - `GET /frota/passagens` → lista das passagens para o mapa de cobertura.
+- **Possivelmente resolvida (v0.8):** antes de gravar as detecções, a API olha as ocorrências abertas (`pendente_envio` ou `enviada`) de categorias que a visão detecta, criadas antes do início da passagem. Se o trajeto passou a até **25 m** dela e **nenhuma** detecção da mesma categoria caiu a até 25 m, o status vira `possivelmente_resolvida`. A saída ganha `"possivelmente_resolvidas": 1`.
+- Na simulação (`SEED > 0`), a API cria 3 passagens de exemplo (linhas 3789-10 e 8000-10) para o console não abrir vazio.
 
 ---
 
@@ -465,10 +469,29 @@ Saída:
 { "token": "eyJhbGciOi...", "nome": "Marina", "orgao_id": "subprefeitura", "expira_em": "2026-11-07T23:20:00Z" }
 ```
 - Erro de usuário ou senha → `401` com "Usuário ou senha incorretos".
-- Rotas protegidas recebem o cabeçalho `Authorization: Bearer <token>`: `PATCH /ocorrencias/{id}/status` e `GET /guardrail/registros`. Sem token → `401`; o front volta para a tela de login.
-- Login de **demonstração**: usuários e senhas ficam em variável de ambiente (`GESTORES=marina:demo-123:subprefeitura`), nunca no repositório.
+- Rotas protegidas recebem o cabeçalho `Authorization: Bearer <token>`: `GET /ocorrencias`, `GET /ocorrencias/metricas`, `PATCH /ocorrencias/{id}/status`, `GET /qualidade` e `GET /guardrail/registros`. Sem token → `401`; o front volta para a tela de login.
+- Login de **demonstração**: usuários e senhas ficam em variável de ambiente (`GESTORES=marina:demo-123:subprefeitura:Marina,joao:demo-123:sabesp:João`), nunca no repositório.
 - O **robô de RPA** usa uma chave própria (`X-Robo-Chave`, também em variável de ambiente) para marcar ocorrências como `enviada`.
 - O cidadão continua sem cadastro: as rotas dele não exigem login.
+
+---
+
+## N. Qualidade da IA
+
+`GET /qualidade` · **exige login do gestor**
+
+```json
+{
+  "modulos": { "llm": "mock", "visao": "yolo", "visao_reserva": "gemini", "rag": "mock", "voz": "mock" },
+  "visao": { "chamadas": 42, "latencia_media_ms": 180.5, "latencia_p95_ms": 410.0, "por_origem": { "yolo": 30, "multimodal": 8, "nenhuma": 4 } },
+  "classificacao": { "total": 128, "confianca_media": 0.78, "baixa_confianca": 9, "corrigidas_pelo_cidadao": 14, "corrigidas_pelo_gestor": 2 },
+  "feedback": { "reporte": { "util": 12, "total": 15 }, "assistente": { "util": 7, "total": 10 } },
+  "guardrail": [{ "nivel": 1, "total": 3, "nao_e_emergencia": 1 }]
+}
+```
+- `visao` conta só as chamadas de `POST /visao/detectar` desde que a API subiu (em memória).
+- `baixa_confianca`: ocorrências com confiança abaixo de 0,5 que o gestor ainda não revisou.
+- `guardrail`: só números por nível, **nunca** texto de ninguém (Governança).
 
 ---
 
@@ -493,3 +516,4 @@ Saída:
 | 0.5 | 10/11/2026 | Ian | `GET /ocorrencias/{id}` (E) para "Meus reportes" acompanhar o status |
 | 0.6 | 10/11/2026 | Ian | Visão (C): reserva multimodal (Gemini Flash) quando o YOLO não acha nada; `Deteccao` ganha `origem` e `descricao`, `bbox` vira opcional |
 | 0.7 | 11/11/2026 | Ian | Assistente (G) e voz (H): campo `guardrail` na resposta quando o guardrail dispara; voz aceita `audio/mp4` (iPhone). Nada muda para o RAG e a voz do parceiro |
+| 0.8 | 12/11/2026 | Ian | Console (F3): `GET /ocorrencias` e `/metricas` exigem login (robô usa a chave); gestor só altera o próprio órgão (`403`); `GET /qualidade` (N); frota marca `possivelmente_resolvida` (25 m) e a simulação cria 3 passagens. O robô de RPA continua igual |

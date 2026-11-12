@@ -296,3 +296,11 @@
   animation: var(--animate-entrada);
   animation-delay: calc(var(--i, 0) * 70ms);
 }
+
+/* Mapa (Leaflet): ícones sem a caixa padrão e mapa de fundo escurecido no tema escuro. */
+.qr-ponto { background: none; border: 0; }
+.qr-mapa { background: var(--qr-surface-raised); font-family: var(--font-sans); }
+.dark .qr-mapa .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+[data-theme="alto-contraste"] .qr-mapa .leaflet-tile-pane { filter: grayscale(1) contrast(1.2); }
+.qr-mapa .leaflet-control-attribution { font-size: 11px; }
+@media (prefers-reduced-motion: reduce) { .qr-mapa .leaflet-zoom-anim .leaflet-zoom-animated { transition: none !important; } }

@@ -1,15 +1,17 @@
 "use client";
 // Etapa 1 · Captura: o que está acontecendo (texto ou ditado) + foto opcional + local.
-import { ArrowRight, CircleCheck, LocateFixed, Mic, MicOff } from "lucide-react";
+import { ArrowRight, CircleCheck, LocateFixed, MapPinned, Mic, MicOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Aviso } from "@/ui/Aviso";
 import { Botao } from "@/ui/Botao";
 import { CampoTexto } from "@/ui/CampoTexto";
 import { FotoEntrada } from "@/ui/FotoEntrada";
+import { MapaOcorrencias } from "@/ui/MapaOcorrencias";
 import { useDitado } from "@/ui/useVoz";
 import type { Localizacao } from "@/providers/tipos";
 
-type EstadoLocal = "parado" | "buscando" | "ok" | "negado" | "indisponivel";
+type EstadoLocal = "parado" | "buscando" | "ok" | "mapa" | "negado" | "indisponivel";
+const CENTRO_SP: Localizacao = { lat: -23.5505, lon: -46.6333 };
 
 const contarLetras = (s: string) => (s.match(/\p{L}/gu) ?? []).length;
 
@@ -22,6 +24,7 @@ export function Captura({ descricao, referencia, local, previa, preparandoFoto, 
   const [erroDescricao, setErroDescricao] = useState<string | null>(null);
   const [erroReferencia, setErroReferencia] = useState<string | null>(null);
   const [estadoLocal, setEstadoLocal] = useState<EstadoLocal>(local ? "ok" : "parado");
+  const [ajustando, setAjustando] = useState(false);
   const campo = useRef<HTMLTextAreaElement>(null);
   const textoAtual = useRef(descricao);
   useEffect(() => { textoAtual.current = descricao; }, [descricao]);
@@ -65,6 +68,7 @@ export function Captura({ descricao, referencia, local, previa, preparandoFoto, 
   };
 
   const semLocal = estadoLocal === "negado" || estadoLocal === "indisponivel";
+  const marcarNoMapa = (lat: number, lon: number) => { aoMudar({ local: { lat, lon } }); setEstadoLocal("mapa"); setErroReferencia(null); };
   const microfone = ditado.suportado === false ? null : (
     <button type="button" onClick={ditado.ouvindo ? ditado.parar : ditado.iniciar}
       aria-label={ditado.ouvindo ? "Parar de ouvir" : "Ditar com o microfone"} aria-pressed={ditado.ouvindo}
@@ -96,11 +100,25 @@ export function Captura({ descricao, referencia, local, previa, preparandoFoto, 
 
       <div className="grid gap-3">
         <p className="text-[17px] font-semibold">Onde fica?</p>
-        {estadoLocal === "ok" && local ? (
-          <p className="flex items-center gap-2 font-semibold text-ok"><CircleCheck aria-hidden="true" className="size-5" />Localização pega pelo aparelho</p>
+        {(estadoLocal === "ok" || estadoLocal === "mapa") && local ? (
+          <p role="status" className="flex items-center gap-2 font-semibold text-ok"><CircleCheck aria-hidden="true" className="size-5" />
+            {estadoLocal === "mapa" ? "Local marcado no mapa" : "Localização pega pelo aparelho"}
+          </p>
         ) : (
           <Botao variante="secundario" icone={LocateFixed} onClick={pegarLocal}>
             {estadoLocal === "buscando" ? "Procurando sua localização…" : "Usar minha localização"}
+          </Botao>
+        )}
+        {ajustando ? (
+          <div className="grid gap-2">
+            <p className="text-base text-ink-muted">Arraste o pino ou toque no mapa onde fica o problema.</p>
+            <MapaOcorrencias rotulo="Mapa para marcar o local do problema" altura={300}
+              pino={{ ...(local ?? CENTRO_SP), aoMover: marcarNoMapa }} />
+            <Botao variante="secundario" onClick={() => setAjustando(false)}>Pronto, o local está certo</Botao>
+          </div>
+        ) : (
+          <Botao variante="secundario" icone={MapPinned} onClick={() => setAjustando(true)}>
+            {local ? "Ajustar no mapa" : "Marcar no mapa"}
           </Botao>
         )}
         {semLocal && (

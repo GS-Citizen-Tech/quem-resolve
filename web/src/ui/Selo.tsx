@@ -1,8 +1,8 @@
 // Selo reutilizável: cor + ícone + palavra (nunca só cor). Usado para confiança,
 // prioridade, origem e status, no app do cidadão e (compacto) no console.
 import type { LucideIcon } from "lucide-react";
-import { Bus, CircleCheck, CircleHelp, OctagonAlert, TriangleAlert, User, Users } from "lucide-react";
-import { nivelConfianca, type Origem } from "@/providers/tipos";
+import { Bus, CircleCheck, CircleHelp, Clock, OctagonAlert, Send, TriangleAlert, User, Users } from "lucide-react";
+import { nivelConfianca, type Origem, type Status } from "@/providers/tipos";
 
 export type Tom = "ok" | "warn" | "danger" | "info" | "neutro";
 
@@ -50,3 +50,14 @@ export function SeloOrigem({ origem, compacto = true }: { origem: Origem; compac
   return <Selo tom={origem === "ambos" ? "info" : "neutro"} icone={cfg.icone} compacto={compacto} texto={cfg.texto} />;
 }
 
+
+/** Status da ocorrência no console (o app do cidadão usa textos mais explicados em Meus reportes). */
+export function SeloStatus({ status, compacto = true }: { status: Status; compacto?: boolean }) {
+  const cfg = {
+    pendente_envio: { tom: "neutro" as const, icone: Clock, texto: "Aguardando envio" },
+    enviada: { tom: "info" as const, icone: Send, texto: "Enviada ao órgão" },
+    possivelmente_resolvida: { tom: "warn" as const, icone: TriangleAlert, texto: "Possivelmente resolvida" },
+    resolvida: { tom: "ok" as const, icone: CircleCheck, texto: "Resolvida" },
+  }[status];
+  return <Selo tom={cfg.tom} icone={cfg.icone} compacto={compacto} texto={cfg.texto} />;
+}

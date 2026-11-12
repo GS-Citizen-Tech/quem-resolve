@@ -2,13 +2,13 @@
 import type {
   AnaliseReporte, AtualizarStatus, Categoria, EventoSom, FeedbackEntrada, FiltrosOcorrencia, Mensagem,
   Metricas, Ocorrencia, OcorrenciaCriar, PassagemResumo, ReporteEntrada, Responsavel, RespostaAssistente,
-  RespostaVoz, Saude, Sessao, VisaoResultado,
+  Qualidade, RespostaVoz, Saude, Sessao, VisaoResultado,
 } from "./tipos";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 const TIMEOUT_MS = 15_000;
 
-export type TipoErro = "offline" | "timeout" | "validacao" | "login" | "nao_encontrado" | "servidor" | "invalida";
+export type TipoErro = "offline" | "timeout" | "validacao" | "login" | "proibido" | "nao_encontrado" | "servidor" | "invalida";
 
 /** Erro com mensagem pronta para mostrar ao cidadão (nunca o detalhe técnico). */
 export class ErroAPI extends Error {
@@ -39,6 +39,7 @@ async function req<T>(caminho: string, init: RequestInit = {}, limiteMs = TIMEOU
     const corpo = await r.json().catch(() => null);
     const detalhe = typeof corpo?.detail === "string" ? corpo.detail : null; // mensagens da API já são amigáveis
     if (r.status === 401) throw new ErroAPI(detalhe ?? "Faça login para continuar.", "login");
+    if (r.status === 403) throw new ErroAPI(detalhe ?? "Você não tem permissão para isso.", "proibido");
     if (r.status === 404) throw new ErroAPI(detalhe ?? "Não encontramos o que você procurou.", "nao_encontrado");
     if (r.status === 413 || r.status === 415) throw new ErroAPI(detalhe ?? "Arquivo não aceito.", "validacao");
     if (r.status === 422) throw new ErroAPI("Algum campo não está certo. Confira e tente de novo.", "validacao");
@@ -108,5 +109,6 @@ export const api = {
   // L · feedback · M · login
   feedback: (f: FeedbackEntrada) => req<{ id: string }>("/feedback", json(f)),
   login: (usuario: string, senha: string) => req<Sessao>("/auth/login", json({ usuario, senha })),
+  qualidade: () => req<Qualidade>("/qualidade"),
   registrosGuardrail: () => req<Record<string, unknown>[]>("/guardrail/registros"),
 };

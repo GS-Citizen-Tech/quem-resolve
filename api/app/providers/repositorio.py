@@ -10,6 +10,7 @@ _ocorrencias: dict[str, Ocorrencia] = {}
 _eventos_som: list[EventoSom] = []
 _passagens: dict[str, dict] = {}
 _feedbacks: list[dict] = []
+_visao: list[tuple[float, str]] = []  # (latência ms, origem: yolo | multimodal | nenhuma), sem imagem
 _guardrail: Counter = Counter()  # registro anônimo (D08): só (data, nível, tipo, camada, nao_e_emergencia)
 
 
@@ -64,7 +65,17 @@ def feedbacks() -> list[dict]:
     return list(_feedbacks)
 
 
+def registrar_visao(latencia_ms: float, origem: str) -> None:
+    _visao.append((latencia_ms, origem))
+    del _visao[:-1000]
+
+
+def chamadas_visao() -> list[tuple[float, str]]:
+    return list(_visao)
+
+
 def limpar() -> None:
+    _visao.clear()
     _feedbacks.clear()
     _ocorrencias.clear()
     _eventos_som.clear()
