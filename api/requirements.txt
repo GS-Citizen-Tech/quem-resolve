@@ -8,3 +8,6 @@ numpy==2.5.4
 pillow==13.0.0
 opencv-python-headless==4.14.0.94
 httpx==0.28.1
+sqlalchemy==2.1.8
+psycopg[binary]==3.3.9
+bcrypt==5.0.0

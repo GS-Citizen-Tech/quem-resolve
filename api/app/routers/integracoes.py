@@ -29,7 +29,7 @@ def evento_som(e: EventoSomEntrada):
 
 @router.get("/iot/eventos", response_model=list[EventoSom])
 def listar_eventos(limite: int = 20):
-    return repositorio.eventos_som()[:limite]
+    return repositorio.eventos_som(limite=min(limite, 200))
 
 
 @router.get("/guardrail/registros")

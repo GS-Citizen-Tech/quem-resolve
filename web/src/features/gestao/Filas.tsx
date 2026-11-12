@@ -2,11 +2,11 @@
 // Filas: tabela ordenada por prioridade, com o detalhe da ocorrência, Reclassificar (mesmo SeletorCategoria do cidadão)
 // e Mudar status. O gestor vê todas as filas, mas só altera as do próprio órgão (a API confere e responde 403).
 // Falhou ao salvar? A linha volta ao valor anterior e aparece o aviso: nada muda "de mentira".
-import { ChevronDown, ChevronRight, MapPinned, Save } from "lucide-react";
+import { ChevronDown, ChevronRight, History, MapPinned, Save } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api, ErroAPI } from "@/providers/api";
-import type { Ocorrencia, Status } from "@/providers/tipos";
+import type { HistoricoItem, Ocorrencia, Status } from "@/providers/tipos";
 import { useAppState } from "@/state/AppState";
 import { Aviso } from "@/ui/Aviso";
 import { Carregando } from "@/ui/Estados";
@@ -144,15 +144,18 @@ export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (
   const [categoria, setCategoria] = useState<string>(o.categoria_final);
   const [salvando, setSalvando] = useState(false);
   const [retorno, setRetorno] = useState<Retorno>(null);
+  const [observacao, setObservacao] = useState("");
+  const [versao, setVersao] = useState(0); // muda a cada salvamento: o histórico recarrega
   const meuOrgao = estado.sessao?.orgao_id === o.responsavel_id;
   const foto = itens.find((i) => i.foto_url)?.foto_url;
 
   /** Aplica na tela na hora (otimista) e confirma com a API, item por item do grupo. Se falhar, desfaz. */
-  const salvar = async (mudanca: { status?: Status; categoria_final?: string }, ok: (n: Ocorrencia) => Retorno) => {
+  const salvar = async (mudanca: { status?: Status; categoria_final?: string; observacao?: string }, ok: (n: Ocorrencia) => Retorno) => {
     if (salvando) return;
     const anteriores = itens;
     const cat = mudanca.categoria_final ? categorias.find((c) => c.id === mudanca.categoria_final) : undefined;
-    aplicar(itens.map((i) => ({ ...i, ...mudanca, ...(cat ? { responsavel_id: cat.responsavel_id, corrigida_pelo_gestor: true } : {}) })));
+    const { observacao: _obs, ...campos } = mudanca;
+    aplicar(itens.map((i) => ({ ...i, ...campos, ...(cat ? { responsavel_id: cat.responsavel_id, corrigida_pelo_gestor: true } : {}) })));
     setSalvando(true);
     setRetorno(null);
     try {
@@ -160,6 +163,8 @@ export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (
       for (const i of itens) novas.push(await api.atualizarOcorrencia(i.id, mudanca));
       aplicar(novas);
       setRetorno(ok(novas[0]));
+      setObservacao("");
+      setVersao((v) => v + 1);
     } catch (e) {
       aplicar(anteriores);
       setStatus(o.status);
@@ -216,7 +221,7 @@ export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (
         <form className="grid gap-2" onSubmit={(e) => {
           e.preventDefault();
           if (status === o.status) { setRetorno({ tipo: "danger", titulo: "Escolha outro status", texto: `A ocorrência já está como “${NOME_STATUS[status]}”.` }); return; }
-          salvar({ status }, () => ({ tipo: "ok", titulo: "Status salvo", texto: `Agora está como “${NOME_STATUS[status]}”${vezes}.` }));
+          salvar({ status, ...(observacao.trim() ? { observacao: observacao.trim() } : {}) }, () => ({ tipo: "ok", titulo: "Status salvo", texto: `Agora está como “${NOME_STATUS[status]}”${vezes}.` }));
         }}>
           <label htmlFor={`st-${o.id}`} className="text-base font-semibold">Mudar status</label>
           <div className="flex flex-wrap gap-2">
@@ -229,6 +234,10 @@ export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (
               <Save aria-hidden="true" className="size-4" />Salvar status
             </button>
           </div>
+          <label htmlFor={`obs-${o.id}`} className="text-xs text-ink-muted">Observação (opcional, vai para o histórico)</label>
+          <input id={`obs-${o.id}`} value={observacao} maxLength={500} onChange={(e) => setObservacao(e.target.value)}
+            placeholder="Ex.: equipe foi ao local"
+            className="min-h-console rounded-chip border-[1.5px] border-line-strong bg-surface-raised px-2.5 text-sm text-ink" />
         </form>
         <details className="grid gap-2">
           <summary className="inline-flex min-h-console cursor-pointer items-center text-base font-semibold underline underline-offset-4">Reclassificar (categoria errada)</summary>
@@ -245,7 +254,41 @@ export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (
             </button>
           </div>
         </details>
+        <Historico id={o.id} versao={versao} />
       </div>
     </div>
+  );
+}
+
+/** Quem mudou o quê (v0.9). Recarrega quando `versao` muda (depois de salvar). */
+function Historico({ id, versao }: { id: string; versao: number }) {
+  const { nomeCategoria } = useBase();
+  const [itens, setItens] = useState<HistoricoItem[] | null>(null);
+  const [falhou, setFalhou] = useState(false);
+  useEffect(() => {
+    let vivo = true;
+    api.historico(id).then((h) => { if (vivo) { setItens(h); setFalhou(false); } }).catch(() => { if (vivo) setFalhou(true); });
+    return () => { vivo = false; };
+  }, [id, versao]);
+  const valor = (campo: HistoricoItem["campo"], v: string | null) =>
+    !v ? "—" : campo === "status" ? NOME_STATUS[v as Status] ?? v : nomeCategoria(v);
+  return (
+    <section aria-label="Histórico de mudanças" className="grid gap-1.5">
+      <h3 className="inline-flex items-center gap-1.5 text-base font-semibold"><History aria-hidden="true" className="size-4" />Histórico</h3>
+      {falhou ? <p className="text-xs text-ink-muted">Não deu para carregar o histórico agora.</p>
+        : !itens ? <p className="text-xs text-ink-muted">Carregando…</p>
+        : itens.length === 0 ? <p className="text-xs text-ink-muted">Nenhuma mudança ainda.</p>
+        : (
+          <ol className="grid gap-1 text-sm">
+            {itens.map((h, i) => (
+              <li key={i} className="grid gap-0.5 border-l-2 border-line-strong pl-2.5">
+                <span className="text-xs text-ink-muted">{dataCurta(h.em)} · {h.quem}</span>
+                <span>{h.campo === "status" ? "Status" : "Categoria"}: {valor(h.campo, h.de)} → <strong>{valor(h.campo, h.para)}</strong></span>
+                {h.observacao && <span className="text-xs">“{h.observacao}”</span>}
+              </li>
+            ))}
+          </ol>
+        )}
+    </section>
   );
 }

@@ -131,7 +131,7 @@ export function FluxoReportar() {
         categoria_sugerida: r.analise?.categoria?.id ?? null,
         confianca: r.analise?.confianca ?? 0,
         categoria_final: r.categoriaId,
-        foto_url: null,
+        foto_base64: foto ? await comoDataUrl(foto.arquivo) : null, // v0.9: a API borra e guarda no Storage privado
       });
       despachar({ tipo: "reporteEnviado", ocorrencia: o });
       removerFoto();
@@ -189,3 +189,13 @@ const NOMES_ETAPA: Record<Etapa, string> = {
   captura: "o que está acontecendo", analisando: "analisando", emergencia: "emergência", resultado: "resultado",
   confirmacao: "confirmação", protocolo: "protocolo",
 };
+
+/** Lê a foto (já reduzida no aparelho) como data URL para ir junto no JSON do reporte. */
+function comoDataUrl(arquivo: File): Promise<string | null> {
+  return new Promise((ok) => {
+    const leitor = new FileReader();
+    leitor.onload = () => ok(typeof leitor.result === "string" ? leitor.result : null);
+    leitor.onerror = () => ok(null); // sem a foto, o reporte segue
+    leitor.readAsDataURL(arquivo);
+  });
+}

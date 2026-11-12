@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **0.8** · 12/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **0.9** · 12/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -237,9 +237,11 @@ Entrada:
   "categoria_sugerida": "buraco",
   "confianca": 0.92,
   "categoria_final": "buraco",
-  "foto_url": null
+  "foto_base64": "data:image/jpeg;base64,/9j/4AAQ..."
 }
 ```
+
+- **Foto (v0.9):** `foto_base64` é opcional (JPEG, PNG ou WEBP, até 8 MB; base64 puro ou data URL). A API reduz para 1280 px, tira o EXIF, **borra rostos, pessoas e placas** e guarda num bucket **privado** do Storage. Foto inválida → `422`. Se o Storage estiver fora do ar, o reporte é criado sem foto (o reporte vale mais que a foto). `foto_url` na entrada é **ignorado**.
 
 Saída (`Ocorrencia`):
 ```json
@@ -272,7 +274,18 @@ Saída (`Ocorrencia`):
 
 `GET /ocorrencias?categoria=&responsavel=&origem=&status=&limite=500` → lista de `Ocorrencia` · **exige login do gestor** (ou a chave do robô de RPA). Sem login → `401`. A lista tem descrição e localização de quem reportou (LGPD).
 
-`GET /ocorrencias/{id}` → uma `Ocorrencia` (`404` se não existir). **Continua aberto** (o id é um UUID impossível de adivinhar). Usado em "Meus reportes" para mostrar o status atual sem baixar a lista inteira.
+- **`foto_url` (v0.9):** nas respostas sem login (`POST` e `GET /ocorrencias/{id}`) vem sempre `null`. Para o gestor (lista e `PATCH`) é um **link temporário** do Storage (vale 1 hora, `LINK_FOTO_MINUTOS`), ou o recorte já borrado da frota. Sem banco, é um `data:` URL.
+
+`GET /ocorrencias/{id}` → uma `Ocorrencia` (`404` se não existir). **Continua aberto** (o id é um UUID impossível de adivinhar). Usado em "Meus reportes" para mostrar o status atual sem baixar a lista inteira. Sem foto (v0.9).
+
+`GET /ocorrencias/{id}/historico` (v0.9) · **exige login do gestor** → quem mudou o quê, do mais antigo ao mais novo (`404` se a ocorrência não existir):
+```json
+[
+  { "em": "2026-11-12T21:47:00Z", "quem": "Marina", "campo": "status", "de": "pendente_envio", "para": "enviada", "observacao": "Mandei pelo SP156" },
+  { "em": "2026-11-13T09:10:00Z", "quem": "Ônibus linha 3789-10", "campo": "status", "de": "enviada", "para": "possivelmente_resolvida", "observacao": "O ônibus passou perto e não viu o problema de novo." }
+]
+```
+- `quem`: nome do gestor, `"Robô RPA"` ou `"Ônibus linha X"`. `campo`: `status` ou `categoria`.
 
 `PATCH /ocorrencias/{id}/status` · **exige login do gestor** (ou a chave do robô de RPA, ver M)
 ```json
@@ -280,9 +293,10 @@ Saída (`Ocorrencia`):
 ```
 - `categoria_final` (opcional): o gestor **reclassifica** a ocorrência (human-in-the-loop do gestor). O `responsavel_id` é recalculado e `corrigida_pelo_gestor` passa a `true`.
 - `status` e `categoria_final` podem vir juntos ou separados; pelo menos um deles é obrigatório.
+- **Histórico (v0.9):** cada mudança real (status ou categoria diferente do atual) entra no histórico com a `observacao`. Mandar o mesmo status de novo não grava nada.
 - **Órgão (v0.8):** o gestor vê todas as filas, mas só altera ocorrências do **próprio órgão** (`orgao_id` do login = `responsavel_id` da ocorrência). Outro órgão → `403` "Esta ocorrência é de outro órgão. Você pode ver, mas não alterar." O robô de RPA altera qualquer uma.
 
-> **Integração com o RPA (parceiro):** o robô busca `GET /ocorrencias?status=pendente_envio`, monta o e-mail para o órgão (`responsavel_id`) e marca `PATCH .../status` como `enviada`. Se o envio falhar, não muda o status e registra no log (caminho seguro em falhas).
+> **Integração com o RPA (parceiro):** o robô busca `GET /ocorrencias?status=pendente_envio`, monta o e-mail para o órgão (`responsavel_id`) e marca `PATCH .../status` como `enviada`. Se o envio falhar, não muda o status e registra no log (caminho seguro em falhas). **v0.9:** com o banco, o robô também pode ler a fila pela visão SQL `relatorios.vw_pendentes_envio` e gravar cada rodada em `relatorios.rpa_execucoes`, com o usuário só de leitura `qr_leitor` (ver `docs/BANCO-PARCEIRO.md`). A marcação como `enviada` continua pelo `PATCH`, para entrar no histórico.
 
 ---
 
@@ -427,9 +441,11 @@ Saída:
 
 `GET /health`
 ```json
-{ "status": "ok", "modulos": { "llm": "mock", "visao": "mock", "rag": "mock", "voz": "mock" } }
+{ "status": "ok", "modulos": { "llm": "mock", "visao": "yolo", "rag": "mock", "voz": "mock", "banco": "postgres", "fotos": "supabase" }, "banco": "ok" }
 ```
-Mostra quais módulos já são reais. Útil no vídeo e para saber o que falta integrar.
+Mostra quais módulos já são reais. Útil no vídeo e para saber o que falta integrar. **v0.9:** `modulos.banco` (`memoria` ou `postgres`), `modulos.fotos` (`memoria` ou `supabase`) e `banco` (`ok` ou `fora do ar`).
+
+> **Banco fora do ar (v0.9):** qualquer rota que precise do banco responde `503` com `{"detail": "Banco de dados indisponível agora. Tente de novo em instantes."}`. O front já mostra "Tentar de novo".
 
 ---
 
@@ -517,3 +533,4 @@ Saída:
 | 0.6 | 10/11/2026 | Ian | Visão (C): reserva multimodal (Gemini Flash) quando o YOLO não acha nada; `Deteccao` ganha `origem` e `descricao`, `bbox` vira opcional |
 | 0.7 | 11/11/2026 | Ian | Assistente (G) e voz (H): campo `guardrail` na resposta quando o guardrail dispara; voz aceita `audio/mp4` (iPhone). Nada muda para o RAG e a voz do parceiro |
 | 0.8 | 12/11/2026 | Ian | Console (F3): `GET /ocorrencias` e `/metricas` exigem login (robô usa a chave); gestor só altera o próprio órgão (`403`); `GET /qualidade` (N); frota marca `possivelmente_resolvida` (25 m) e a simulação cria 3 passagens. O robô de RPA continua igual |
+| 0.9 | 12/11/2026 | Ian | Banco (B1–B3): `foto_base64` no `POST /ocorrencias` (borrada e guardada no Storage privado), `foto_url` só para o gestor (link temporário), `GET /ocorrencias/{id}/historico`, `observacao` do `PATCH` vai para o histórico, `/feedback` devolve um `id` próprio, `503` com o banco fora, `banco`/`fotos` no `/health` e em `/qualidade`. Robô de RPA: mesma API, mais as visões SQL opcionais |

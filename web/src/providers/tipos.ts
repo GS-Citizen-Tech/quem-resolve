@@ -49,7 +49,9 @@ export interface AnaliseReporte {
 // E · Ocorrências
 export interface OcorrenciaCriar {
   descricao: string; localizacao: Localizacao; categoria_sugerida: string | null;
-  confianca: number; categoria_final: string; foto_url?: string | null;
+  confianca: number; categoria_final: string;
+  /** v0.9: foto reduzida em base64 (data URL). A API borra rostos e placas e guarda no Storage privado. */
+  foto_base64?: string | null;
 }
 export interface Ocorrencia {
   id: string; protocolo: string; criada_em: string; descricao: string; lat: number; lon: number;
@@ -57,6 +59,8 @@ export interface Ocorrencia {
   corrigida_pelo_cidadao: boolean; corrigida_pelo_gestor: boolean; status: Status; prioridade: number;
   origem: Origem; grupo_duplicata_id: string | null; foto_url: string | null;
 }
+/** v0.9 · GET /ocorrencias/{id}/historico (só gestor) */
+export interface HistoricoItem { em: string; quem: string; campo: "status" | "categoria"; de: string | null; para: string | null; observacao: string | null }
 export interface AtualizarStatus { status?: Status; categoria_final?: string; observacao?: string }
 export interface FiltrosOcorrencia { categoria?: string; responsavel?: string; origem?: Origem; status?: Status }
 

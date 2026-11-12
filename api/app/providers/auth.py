@@ -1,5 +1,5 @@
-"""Login simples do gestor: token assinado com HMAC (sem banco, sem dependência extra).
-Suficiente para a demonstração; em produção, trocar por Supabase Auth."""
+"""Login do gestor: senha conferida com bcrypt (tabela gestores, ou o GESTORES do .env sem banco)
+e token assinado com HMAC. Suficiente para a demonstração; em produção, trocar por Supabase Auth."""
 import base64
 import hashlib
 import hmac
@@ -7,19 +7,15 @@ import json
 import secrets
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from fastapi import Header, HTTPException
 
 from app import config
+from app.providers import repositorio
 
 
-def _gestores() -> dict[str, dict]:
-    res = {}
-    for item in config.GESTORES:
-        partes = item.split(":")
-        if len(partes) == 4:
-            usuario, senha, orgao, nome = partes
-            res[usuario] = {"senha": senha, "orgao_id": orgao, "nome": nome}
-    return res
+# Hash de mentira para conferir quando o usuário não existe: o tempo de resposta não entrega quem existe.
+_HASH_VAZIO = bcrypt.hashpw(b"nao-existe", bcrypt.gensalt(rounds=10))
 
 
 def _assinar(dados: bytes) -> str:
@@ -27,8 +23,9 @@ def _assinar(dados: bytes) -> str:
 
 
 def autenticar(usuario: str, senha: str) -> dict | None:
-    g = _gestores().get(usuario)
-    if not g or not secrets.compare_digest(g["senha"], senha):
+    g = repositorio.gestor(usuario)
+    certo = bcrypt.checkpw(senha.encode(), g["senha_hash"].encode() if g else _HASH_VAZIO)
+    if not g or not certo or not g["ativo"]:
         return None
     expira = datetime.now(timezone.utc) + timedelta(hours=config.AUTH_HORAS)
     carga = {"u": usuario, "o": g["orgao_id"], "n": g["nome"], "e": int(expira.timestamp())}

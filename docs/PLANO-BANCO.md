@@ -1,6 +1,6 @@
 # Plano do banco de dados
 
-> Versão **0.2** · 12/11/2026 · Ian · **Para aprovar antes de codar.**
+> Versão **1.0** · 12/11/2026 · Ian · **Aprovado (as 5 decisões) e B1–B3 prontos.** Resultado na seção 12.
 > Base: `PRD.md` v0.4 (seções 8, 10 e 12), `VISAO-GERAL-GS.md` (o que cada disciplina pede), `CONTRATOS.md` v0.8, `PLANO-FRONT.md` (deploy e F4), o código da API (`repositorio.py`, `simulacao.py`, `frota.py`, `qualidade.py`) e o `frota/processar_video.py`.
 > A v0.1 deste plano olhava só para a API. Esta versão olha para as 9 disciplinas, o deploy e o trabalho do parceiro.
 
@@ -148,7 +148,7 @@ Front (Vercel) ──HTTPS──> API FastAPI (Render) ──> Postgres + Storag
 | O parceiro já começou o RAG ou o RPA sem banco | O banco é opcional para ele: os módulos dele continuam funcionando com arquivos e entram no banco quando ele puder. A pergunta 3 e a 5 do `CONTRATOS.md` ("ler do banco?") precisam da resposta dele |
 | Docker não instalado no seu PC | O dia a dia continua sem Docker (memória ou Supabase direto). O `docker-compose` é só para o deploy B da disciplina 04 |
 | Duas versões do repositório se comportarem diferente | A mesma suíte de testes roda nas duas |
-| Sem backup no plano gratuito | Script `pg_dump` antes do vídeo e antes da entrega |
+| Sem backup no plano gratuito | `python -m app.db.backup` (JSON por tabela, sem precisar do `pg_dump`) antes do vídeo e antes da entrega |
 
 ## 11. Para o Ian decidir
 
@@ -157,3 +157,36 @@ Front (Vercel) ──HTTPS──> API FastAPI (Render) ──> Postgres + Storag
 3. **Guardar a foto do cidadão** reduzida e borrada no Storage privado, com link temporário só para o gestor. Hoje ela é descartada. **Recomendo sim**, pelo HITL e porque o PRD já previa.
 4. **Retenção de 90 dias** depois de resolvida para fotos e descrição. Fecha a questão em aberto do PRD. **Recomendo sim.**
 5. **Migrações em arquivos SQL** em vez de Alembic, para o parceiro conseguir ler e acrescentar as dele. **Recomendo SQL.**
+
+## 12. Resultado (B1–B3, 12/11)
+
+Ian aprovou as 5 recomendações ("concordo com o plano vamos iniciar").
+
+**B1 · banco ligado na API**
+- `api/app/db/migracoes/001–007.sql` (SQL puro) + `app/db/migrar.py` (aplica em ordem, uma vez, com trava; roda sozinho na subida).
+- `app/providers/repositorio.py` virou a fachada: sem `DATABASE_URL` → `app/db/memoria.py`; com → `app/db/postgres.py` (SQLAlchemy Core + psycopg 3, SQL à mão). As duas devolvem **cópias**: quem muda um campo chama `salvar_ocorrencia` (antes a memória deixava mudar o objeto direto, e o Postgres perderia essas mudanças).
+- Gestores na tabela `gestores` com **bcrypt**; o `GESTORES` do `.env` só cria quem não existe. Login confere o hash mesmo para usuário inexistente (tempo igual). Gestor `ativo = false` não entra.
+- `historico_ocorrencia`: gestor (com a `observacao` do `PATCH`, que antes se perdia), robô e ônibus ("possivelmente resolvida").
+- Cada detecção da frota fica em `deteccoes_frota`, ligada à ocorrência que gerou. `voz_latencias` recebe as latências do `/voz/conversar`.
+- `simulada = true` nas 120 ocorrências e 3 passagens da semente. A base (`quem_resolve.json`) é copiada para `responsaveis`/`categorias` a cada subida.
+- Banco fora do ar → `503` "Banco de dados indisponível agora". `/health` e `/qualidade` mostram `banco`.
+- Correção de quebra: `/feedback` sobrescrevia o próprio `id` com o id do alvo; agora tem `id` próprio e `alvo_id`.
+
+**B2 · fotos**
+- `app/providers/armazenamento.py`: memória ou **Supabase Storage** (bucket privado `fotos`, criado na subida). O banco guarda só o caminho.
+- `POST /ocorrencias` aceita `foto_base64`: reduz para 1280 px, tira o EXIF, borra rostos/pessoas/placas e guarda. `foto_url` mandado pelo cliente é ignorado. Storage fora → reporte sem foto.
+- Recortes da frota (data URL do `processar_video.py`) também vão para o Storage.
+- Gestor recebe links assinados de 1 hora (um pedido só ao Storage para a lista toda). `GET /ocorrencias/{id}` aberto e o `POST` não devolvem foto.
+- `GET /ocorrencias/{id}/historico`. Front: a confirmação do cidadão avisa que a foto vai borrada e some em 90 dias; na fila, foto, campo "Observação" e "Histórico".
+
+**B3 · relatórios e LGPD**
+- `007_relatorios.sql`: schema `relatorios` (fora da API REST do Supabase) com `rpa_execucoes` e as visões `vw_ocorrencias_resumo`, `vw_pendentes_envio`, `vw_por_orgao_mes`, `vw_frota_cobertura`, `vw_carga_frota`, `vw_guardrail_semana`.
+- `python -m app.db.criar_leitor`: usuário `qr_leitor` (lê as visões, grava `rpa_execucoes`, não toca nas tabelas da API).
+- `python -m app.db.limpeza [--simular]`: 90 dias depois de resolvida apaga foto e recortes do Storage e troca a descrição; apaga eventos de som antigos.
+- `python -m app.db.backup`: JSON por tabela em `api/backups/` (fora do Git).
+- Guias: `docs/BANCO-PARCEIRO.md` (parceiro) e `docs/SUPABASE-PASSO-A-PASSO.md` (Ian).
+
+**Testes:** 73 no Postgres (`TEST_DATABASE_URL=... pytest`), 66 na memória (7 só fazem sentido no Postgres). Roteiro da F3 inteiro sem erros com o Postgres, e `docs/evidencias/banco/banco.playwright.js` (cidadão manda foto → gestora vê a foto borrada e o histórico). Dados conferidos depois de reiniciar a API.
+
+**Falta:** testar com o Supabase de verdade (B0, do Ian) e o B4 (docker-compose + deploy) na F4.
+

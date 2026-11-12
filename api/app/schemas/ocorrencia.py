@@ -15,7 +15,9 @@ class OcorrenciaCriar(BaseModel):
     categoria_sugerida: str | None = None
     confianca: float = Field(default=0, ge=0, le=1)
     categoria_final: str = Field(description="Categoria confirmada ou corrigida pelo cidadão")
-    foto_url: str | None = None
+    foto_url: str | None = Field(default=None, description="Ignorado no POST do cidadão (v0.9): use foto_base64")
+    foto_base64: str | None = Field(default=None, max_length=11_200_000,
+                                    description="v0.9: foto reduzida (JPEG/PNG/WEBP, até 8 MB). A API borra e guarda no Storage privado")
 
 
 class Ocorrencia(BaseModel):
@@ -36,6 +38,16 @@ class Ocorrencia(BaseModel):
     grupo_duplicata_id: str | None = None
     foto_url: str | None = None
     corrigida_pelo_gestor: bool = False
+
+
+class HistoricoItem(BaseModel):
+    """v0.9: uma mudança na ocorrência (status ou categoria), com quem fez."""
+    em: datetime
+    quem: str = Field(description="Nome do gestor, \"Robô RPA\" ou \"Ônibus linha X\"")
+    campo: Literal["status", "categoria"]
+    de: str | None
+    para: str | None
+    observacao: str | None = None
 
 
 class AtualizarStatus(BaseModel):

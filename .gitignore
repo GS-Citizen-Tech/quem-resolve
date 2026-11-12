@@ -13,3 +13,6 @@ out/
 .env.*.local
 # Saídas do processamento de vídeo da frota (vídeo anotado, recortes)
 frota/saida/
+
+# Backups do banco (app/db/backup.py): têm hash de senha e dados de ocorrências
+api/backups/

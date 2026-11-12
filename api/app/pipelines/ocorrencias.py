@@ -28,9 +28,8 @@ def _prioridade(categoria_id: str, tamanho_grupo: int, origem: Origem) -> int:
 
 
 def duplicata_de(categoria_id: str, lat: float, lon: float) -> Ocorrencia | None:
-    for o in repositorio.ocorrencias():
-        if (o.categoria_final == categoria_id and o.status != "resolvida"
-                and distancia_m(lat, lon, o.lat, o.lon) <= RAIO_DUPLICATA_M):
+    for o in repositorio.ocorrencias(categoria=categoria_id):
+        if o.status != "resolvida" and distancia_m(lat, lon, o.lat, o.lon) <= RAIO_DUPLICATA_M:
             return o
     return None
 
@@ -50,7 +49,8 @@ def registrar(dados: OcorrenciaCriar, origem: Origem = "cidadao", criada_em: dat
         if existente.origem != origem:
             existente.origem = "ambos"
         existente.grupo_duplicata_id = grupo
-    tamanho = 1 + sum(1 for o in repositorio.ocorrencias() if grupo and (o.grupo_duplicata_id == grupo))
+        repositorio.salvar_ocorrencia(existente)  # entra no grupo antes da contagem abaixo
+    tamanho = 1 + (len(repositorio.ocorrencias(grupo=grupo)) if grupo else 0)
     o = Ocorrencia(
         id=str(uuid.uuid4()),
         protocolo=_novo_protocolo(),
@@ -70,20 +70,12 @@ def registrar(dados: OcorrenciaCriar, origem: Origem = "cidadao", criada_em: dat
         foto_url=dados.foto_url,
     )
     o.prioridade = _prioridade(o.categoria_final, tamanho, o.origem)
-    if existente:
-        existente.prioridade = max(existente.prioridade, o.prioridade)
+    if existente and o.prioridade > existente.prioridade:
+        existente.prioridade = o.prioridade
+        repositorio.salvar_ocorrencia(existente)
     return repositorio.salvar_ocorrencia(o)
 
 
 def filtrar(categoria: str | None = None, responsavel: str | None = None, origem: str | None = None,
-            status: str | None = None) -> list[Ocorrencia]:
-    res = repositorio.ocorrencias()
-    if categoria:
-        res = [o for o in res if o.categoria_final == categoria]
-    if responsavel:
-        res = [o for o in res if o.responsavel_id == responsavel]
-    if origem:
-        res = [o for o in res if o.origem == origem]
-    if status:
-        res = [o for o in res if o.status == status]
-    return res
+            status: str | None = None, limite: int | None = None) -> list[Ocorrencia]:
+    return repositorio.ocorrencias(categoria=categoria, responsavel=responsavel, origem=origem, status=status, limite=limite)

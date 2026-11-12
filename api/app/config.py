@@ -32,6 +32,15 @@ LIMIAR_CONFIANCA = float(os.getenv("LIMIAR_CONFIANCA", "0.5"))  # abaixo disso: 
 LIMIAR_IOT = float(os.getenv("LIMIAR_IOT", "0.7"))
 SEED_OCORRENCIAS = int(os.getenv("SEED_OCORRENCIAS", "120"))
 
+# Banco: vazio = memória (some ao reiniciar). Supabase: "Session pooler" em Project Settings > Database.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+# Fotos: vazio = memória. Supabase: Project Settings > API (URL e a chave "secret"/service_role, só aqui na API).
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_CHAVE_SECRETA = os.getenv("SUPABASE_CHAVE_SECRETA", "")
+STORAGE_BUCKET = os.getenv("STORAGE_BUCKET", "fotos")
+LINK_FOTO_MINUTOS = int(os.getenv("LINK_FOTO_MINUTOS", "60"))  # o link da foto para o gestor vale por 1 hora
+RETENCAO_DIAS = int(os.getenv("RETENCAO_DIAS", "90"))  # fotos e descrição somem 90 dias depois de resolvida
+
 # Login de demonstração do gestor: "usuario:senha:orgao_id:Nome", separados por vírgula.
 GESTORES = _lista("GESTORES", "marina:demo-123:subprefeitura:Marina,joao:demo-123:sabesp:João")
 AUTH_SEGREDO = os.getenv("AUTH_SEGREDO", "troque-este-segredo-em-producao")

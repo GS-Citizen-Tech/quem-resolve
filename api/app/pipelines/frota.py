@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime
 
 from app.pipelines import ocorrencias
+from app.providers import armazenamento
 from app.providers import base_conhecimento as base
 from app.providers import repositorio
 from app.schemas.base import Localizacao
@@ -43,7 +44,10 @@ def marcar_possivelmente_resolvidas(p: PassagemFrota, antes_de: datetime) -> int
             continue
         if any(c == o.categoria_final and ocorrencias.distancia_m(o.lat, o.lon, la, lo) <= RAIO_REVISITA_M for c, la, lo in vistos):
             continue
-        o.status = "possivelmente_resolvida"
+        de, o.status = o.status, "possivelmente_resolvida"
+        repositorio.salvar_ocorrencia(o)
+        repositorio.registrar_historico(o.id, f"onibus:{p.linha_onibus}", "status", de, o.status,
+                                        "O ônibus passou perto e não viu o problema de novo.")
         n += 1
     return n
 
@@ -51,30 +55,35 @@ def marcar_possivelmente_resolvidas(p: PassagemFrota, antes_de: datetime) -> int
 def ingerir(p: PassagemFrota) -> ResultadoIngestao:
     pid = str(uuid.uuid4())
     novas = associadas = 0
+    salvas: list[dict] = []
     resolvidas = marcar_possivelmente_resolvidas(p, antes_de=p.inicio)
     for d in p.deteccoes:
         cid = d.deteccao.categoria_id
         if not cid:
             continue
         ja_existia = ocorrencias.duplicata_de(cid, d.lat, d.lon) is not None
-        ocorrencias.registrar(
+        recorte = armazenamento.guardar_data_url(f"frota/{pid}", d.recorte_url)  # data URL → Storage privado
+        o = ocorrencias.registrar(
             OcorrenciaCriar(
                 descricao=f"Detectado pela frota (linha {p.linha_onibus}): {d.deteccao.classe}",
                 localizacao=Localizacao(lat=d.lat, lon=d.lon),
                 categoria_sugerida=cid,
                 confianca=d.deteccao.confianca,
                 categoria_final=cid,
-                foto_url=d.recorte_url,
+                foto_url=recorte,
             ),
             origem="frota",
             criada_em=d.detectada_em,
         )
+        salvas.append({"detectada_em": d.detectada_em, "lat": d.lat, "lon": d.lon, "classe": d.deteccao.classe,
+                       "categoria_id": cid, "confianca": d.deteccao.confianca, "bbox": d.deteccao.bbox,
+                       "recorte_url": recorte, "ocorrencia_id": o.id})
         associadas += ja_existia
         novas += not ja_existia
     repositorio.salvar_passagem(pid, {
         "linha_onibus": p.linha_onibus, "inicio": p.inicio.isoformat(), "fim": p.fim.isoformat(),
         "trajeto": p.trajeto, "deteccoes": len(p.deteccoes), "fps": p.fps_processamento,
         "possivelmente_resolvidas": resolvidas,
-    })
+    }, salvas)
     return ResultadoIngestao(passagem_id=pid, novas_ocorrencias=novas, associadas_a_existentes=associadas,
                              possivelmente_resolvidas=resolvidas)

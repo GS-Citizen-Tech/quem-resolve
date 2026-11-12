@@ -21,6 +21,7 @@ def login(dados: LoginEntrada):
 @router.post("/feedback", response_model=FeedbackRecebido, status_code=201)
 def feedback(dados: FeedbackEntrada):
     """'Isso ajudou?' do cidadão (sem dado pessoal)."""
-    f = {"id": str(uuid.uuid4()), "recebido_em": datetime.now(timezone.utc), **dados.model_dump()}
+    f = {"id": str(uuid.uuid4()), "recebido_em": datetime.now(timezone.utc), "alvo": dados.alvo, "alvo_id": dados.id,
+         "util": dados.util, "comentario": dados.comentario}
     repositorio.salvar_feedback(f)
     return f

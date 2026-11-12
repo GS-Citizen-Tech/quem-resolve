@@ -25,7 +25,8 @@ Os módulos do parceiro entram na API trocando o mock pela implementação real,
 |---|---|
 | `docs/PRD.md` | PRD v0.4: problema, personas, requisitos, arquitetura, mapa disciplina → módulo, cronograma, decisões D01–D17 |
 | `docs/VISAO-GERAL-GS.md` | Resumo do que cada uma das 9 disciplinas exige |
-| `docs/CONTRATOS.md` | Contratos da API v0.8 (endpoints A a N, JSON de entrada e saída, dono de cada módulo) |
+| `docs/CONTRATOS.md` | Contratos da API v0.9 (endpoints A a N, JSON de entrada e saída, dono de cada módulo) |
+| `docs/PLANO-BANCO.md` | Banco v1.0: Supabase (Postgres + Storage), tabelas, visões, LGPD, resultado B1–B3. Guias: `SUPABASE-PASSO-A-PASSO.md` (Ian) e `BANCO-PARCEIRO.md` |
 | `docs/PLANO-FRONT.md` | Plano do front v0.3: telas, componentes, estado, falhas, acessibilidade, barema da disciplina 04, fases F0–F5, decisões |
 | `docs/EXEMPLOS-FLUXO.md` | Jornada da Dona Cida (cidadão) e da Marina (gestão), com os desvios |
 | `docs/design-system/` | Cópia do design system (fonte da verdade: https://claude.ai/artifact/H7gZMbBkjfYbmLw9Qf1nLr). `README.md` = brand book + CSS Tailwind v4; `componentes/*.md` = regras de cada componente |
@@ -35,8 +36,11 @@ Os módulos do parceiro entram na API trocando o mock pela implementação real,
 
 ```
 api/   FastAPI · app/routers · app/schemas (Pydantic = contratos) · app/pipelines (lógica) · app/providers (LLM, visão, RAG, voz, dados, login)
-       Tudo começa em "mock" (config.py, variáveis *_PROVIDER). Dados em memória + 120 ocorrências simuladas.
-       Testes: cd api && pytest   (52 testes: 26 da F0 + 8 da visão + 1 da F1 + 11 da reserva multimodal + 2 da F2 + 4 da F3)
+       Tudo começa em "mock" (config.py, variáveis *_PROVIDER). 120 ocorrências simuladas na 1ª subida (simulada = true).
+       Banco: sem DATABASE_URL = memória; com = Postgres/Supabase. Todo acesso passa por app/providers/repositorio.py
+       (fachada → app/db/memoria.py ou app/db/postgres.py). Devolve CÓPIAS: mudou um campo, chame salvar_ocorrencia.
+       Migrações: app/db/migracoes/NNN_*.sql (SQL puro, aplicadas na subida). Fotos: app/providers/armazenamento.py.
+       Testes: cd api && pytest   (66 na memória) · TEST_DATABASE_URL=postgresql://.../banco_de_teste pytest (73 no Postgres)
        Visão real: app/providers/visao.py (YoloVisao, ONNX + onnxruntime, sem PyTorch) · modelo em api/modelos/rdd2022-n-r2.onnx + .json (classes, limiares)
 web/   Next.js 16 (App Router) + Tailwind v4 + lucide-react
        src/features (telas) · src/ui (componentes reutilizáveis) · src/state (AppState: tema, meus reportes, conversa, sessão do gestor) · src/providers (api.ts + tipos.ts)
@@ -69,6 +73,7 @@ web/   Next.js 16 (App Router) + Tailwind v4 + lucide-react
 - ✅ **F1 · fluxo do cidadão** (10/11): `/reportar` numa rota só com etapas (captura com ditado, foto reduzida no aparelho e localização → analisando → emergência básica nível 1/2 ou aviso nível 3 → resultado com foto e caixas da visão, selo de confiança e "Não é isso" → confirmação → protocolo com "Isso ajudou?"), escolha manual com a base embutida quando a API cai, e `/meus-reportes` com status via `GET /ocorrencias/{id}`. Plano e resultado: `docs/PLANO-F1.md`. Prints: `docs/evidencias/f1/`. Casos de teste da IA: `docs/CASOS-TESTE-IA.md`.
 - ✅ **F2 · segurança, assistente, voz e OuviAí** (11/11): `ui/TelaEmergencia` + `ui/SaidaRapida` (Esc ou botão → busca neutra do Google, apaga rascunho e conversa) no reporte, no chat e na voz; `/assistente` com chat (fontes citadas, "não sei" + 156, "Isso ajudou?", conversa salva) e "Falar" (consentimento, MediaRecorder até 60 s, transcrição, áudio ou voz do navegador, latência); `ui/AlertaSom` (consulta `/iot/eventos` a cada 5 s, faixa + vibração, sino no topo para ligar/desligar). Contrato v0.7 (`guardrail` na resposta do assistente/voz, `audio/mp4`). Plano e resultado: `docs/PLANO-F2.md`. Prints: `docs/evidencias/f2/`. RAG e voz ainda em mock (parceiro).
 - ✅ **F3 · console da gestão** (12/11): `/gestao/entrar` (login, volta para a tela, sessão expirada), `LayoutConsole` (topo com a pessoa e Sair, trilho, dock), Visão geral (3 indicadores, Plotly por categoria e por origem, filtros na URL), Filas (agrupa duplicatas, reclassificar com `SeletorCategoria`, mudar status, otimista com desfazer, 403 de outro órgão), Mapa (Leaflet + lista), Frota (trajetos, FPS, possivelmente resolvidas, recortes), Qualidade da IA (`GET /qualidade`). Cidadão ganhou "Ajustar no mapa". Contrato v0.8. Plano e resultado: `docs/PLANO-F3.md`. Prints: `docs/evidencias/f3/`.
+- ✅ **Banco B1–B3** (12/11): Postgres + Storage do Supabase, histórico, fotos borradas com link temporário, visões SQL, usuário só leitura, retenção de 90 dias, backup. Contrato v0.9. Ver `docs/PLANO-BANCO.md` seção 12. Falta o Ian ligar o Supabase (`docs/SUPABASE-PASSO-A-PASSO.md`).
 - ⏭️ **Próximo: F4** (acabamento, deploy, docker-compose, teste com 3 pessoas, README).
 - Depois: F5 (vídeo de 5 min).
 - ✅ **Visão Computacional (V4, 10/11)**: modelo YOLOv8n RDD2022 rodada 2 (mAP@50 0,584 no teste) ligado na API em `/visao/detectar`. Treino, métricas e plano em `../Materias/VC/` (PLANO-VC.md). V5 (10/11): `frota/processar_video.py` (vídeo ou pasta de fotos → detecção com o mesmo YoloVisao, borra rosto/pessoa/placa, rastreio por IoU, GPX ou trajeto simulado → `POST /frota/passagens`; ver `frota/README.md`). Relatório v1 em `../Materias/VC/relatorio/`. Reserva multimodal (10/11): `app/providers/visao_reserva.py` (Gemini Flash, `VISAO_RESERVA`), entra só na foto do cidadão quando o YOLO não acha nada; foto borrada antes (`app/providers/privacidade.py`, o mesmo Borrador da frota); contrato v0.6.

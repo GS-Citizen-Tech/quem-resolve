@@ -1,6 +1,6 @@
 // Cliente HTTP da API FastAPI (camada providers/). O front nunca fala com o LLM: tudo passa por aqui.
 import type {
-  AnaliseReporte, AtualizarStatus, Categoria, EventoSom, FeedbackEntrada, FiltrosOcorrencia, Mensagem,
+  AnaliseReporte, AtualizarStatus, Categoria, EventoSom, FeedbackEntrada, FiltrosOcorrencia, HistoricoItem, Mensagem,
   Metricas, Ocorrencia, OcorrenciaCriar, PassagemResumo, ReporteEntrada, Responsavel, RespostaAssistente,
   Qualidade, RespostaVoz, Saude, Sessao, VisaoResultado,
 } from "./tipos";
@@ -90,6 +90,7 @@ export const api = {
   ocorrencias: (f: FiltrosOcorrencia = {}) => req<Ocorrencia[]>(`/ocorrencias${qs(f)}`),
   ocorrencia: (id: string) => req<Ocorrencia>(`/ocorrencias/${encodeURIComponent(id)}`),
   metricas: (f: Omit<FiltrosOcorrencia, "status"> = {}) => req<Metricas>(`/ocorrencias/metricas${qs(f)}`),
+  historico: (id: string) => req<HistoricoItem[]>(`/ocorrencias/${encodeURIComponent(id)}/historico`),
   atualizarOcorrencia: (id: string, d: AtualizarStatus) => req<Ocorrencia>(`/ocorrencias/${id}/status`, json(d, "PATCH")),
 
   // G · assistente · H · voz

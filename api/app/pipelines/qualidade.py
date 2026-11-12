@@ -33,7 +33,7 @@ def calcular() -> Qualidade:
 
     return Qualidade(
         modulos={"llm": config.LLM_PROVIDER, "visao": config.VISAO_PROVIDER, "visao_reserva": config.VISAO_RESERVA,
-                 "rag": config.RAG_PROVIDER, "voz": config.VOZ_PROVIDER},
+                 "rag": config.RAG_PROVIDER, "voz": config.VOZ_PROVIDER, "banco": repositorio.nome()},
         visao=QualidadeVisao(chamadas=len(vis), latencia_media_ms=round(sum(lat) / len(lat), 1) if lat else None,
                              latencia_p95_ms=_p95(lat), por_origem=por_origem),
         classificacao=QualidadeClassificacao(

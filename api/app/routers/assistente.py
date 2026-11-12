@@ -4,6 +4,7 @@ import time
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import TypeAdapter, ValidationError
 
+from app import config
 from app.pipelines import guardrail
 from app.providers import repositorio
 from app.providers.rag import obter_rag
@@ -66,5 +67,6 @@ async def conversar(audio: UploadFile = File(...), historico: str | None = Form(
     audio_b64 = voz.sintetizar(falado)
     t3 = time.perf_counter()
     ms = lambda a, b: round((b - a) * 1000, 1)  # noqa: E731
-    return RespostaVoz(transcricao=transcricao, resposta=resposta, texto_falado=falado, audio_base64=audio_b64,
-                       latencias=Latencias(stt_ms=ms(t0, t1), llm_ms=ms(t1, t2), tts_ms=ms(t2, t3), total_ate_fala_ms=ms(t0, t3)))
+    lat = Latencias(stt_ms=ms(t0, t1), llm_ms=ms(t1, t2), tts_ms=ms(t2, t3), total_ate_fala_ms=ms(t0, t3))
+    repositorio.registrar_voz(lat.stt_ms, lat.llm_ms, lat.tts_ms, lat.total_ate_fala_ms, config.VOZ_PROVIDER)  # só números
+    return RespostaVoz(transcricao=transcricao, resposta=resposta, texto_falado=falado, audio_base64=audio_b64, latencias=lat)
