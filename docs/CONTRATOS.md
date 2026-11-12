@@ -171,7 +171,7 @@ Saída:
 - `bbox` passa a ser **opcional**: o multimodal pode devolver `null` quando o problema ocupa a foto toda. O front mostra só a legenda.
 - `descricao`: frase curta do multimodal. `null` no YOLO.
 - A confiança do multimodal é um palpite do modelo, não calibrado. Ela é limitada a `LIMIAR_CONFIANCA − 0,01`, então sempre pede confirmação.
-- `VISAO_RESERVA_MODELO` aceita uma lista (padrão `gemini-3.5-flash,gemini-3.8-flash,gemini-3.5-flash-lite`): com 429 (sem cota) ou 5xx tenta o próximo, dentro dos mesmos 8 s. No plano gratuito cada modelo aceita cerca de 20 pedidos por dia.
+- `VISAO_RESERVA_MODELO` aceita uma lista (padrão `gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.8-flash`): com 429 (sem cota), 5xx ou demora tenta o próximo, dentro de 12 s no total (`VISAO_RESERVA_TIMEOUT`; cada modelo usa no máximo 60% do que sobra). O front espera até 25 s pelo `/visao/detectar`. No plano gratuito cada modelo aceita cerca de 20 pedidos por dia.
 - Se o multimodal não vê problema, ou falha (sem chave, timeout de 8 s, resposta inválida), volta `deteccoes = []` como antes.
 - A frota (`I`) nunca usa a reserva.
 

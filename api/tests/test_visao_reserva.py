@@ -136,3 +136,25 @@ def test_modelo_sobrecarregado_tenta_o_proximo():
     g = GeminiReserva("gemini-cheio, gemini-livre", "k", 2, transporte=httpx.MockTransport(tratar))
     [d] = g.classificar(Image.new("RGB", (64, 64)))
     assert chamados == ["gemini-cheio", "gemini-livre"] and g.nome == "gemini-livre" and d.categoria_id == "arvore"
+
+
+def test_modelo_lento_tenta_o_proximo_e_tudo_lento_avisa():
+    """12/11: o gemini-3.5-flash estourou o tempo na máquina do Ian. Agora o próximo modelo da lista ainda tenta."""
+    chamados = []
+
+    def tratar(req: httpx.Request):
+        modelo = req.url.path.split("/")[-1].split(":")[0]
+        chamados.append((modelo, req.extensions["timeout"]["read"]))
+        if modelo.startswith("gemini-lento"):
+            raise httpx.ReadTimeout("The read operation timed out", request=req)
+        texto = json.dumps({"categoria_id": "lixo_acumulado", "confianca": 0.8, "descricao": "Sacos de lixo"})
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": texto}]}}]})
+
+    g = GeminiReserva("gemini-lento, gemini-rapido", "k", 10, transporte=httpx.MockTransport(tratar))
+    [d] = g.classificar(Image.new("RGB", (64, 64)))
+    assert [m for m, _ in chamados] == ["gemini-lento", "gemini-rapido"] and d.categoria_id == "lixo_acumulado"
+    assert chamados[0][1] == pytest.approx(6, abs=0.2)  # o 1º usa só 60% do tempo, sobra para o 2º
+
+    g = GeminiReserva("gemini-lento-1, gemini-lento-2", "k", 10, transporte=httpx.MockTransport(tratar))
+    with pytest.raises(ErroReserva, match="não respondeu"):
+        g.classificar(Image.new("RGB", (64, 64)))

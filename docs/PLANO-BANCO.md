@@ -181,6 +181,7 @@ Ian aprovou as 5 recomendações ("concordo com o plano vamos iniciar").
 
 **B3 · relatórios e LGPD**
 - `007_relatorios.sql`: schema `relatorios` (fora da API REST do Supabase) com `rpa_execucoes` e as visões `vw_ocorrencias_resumo`, `vw_pendentes_envio`, `vw_por_orgao_mes`, `vw_frota_cobertura`, `vw_carga_frota`, `vw_guardrail_semana`.
+- `008_sem_api_rest.sql` (depois do verificador de segurança do Supabase): tira também a permissão dos papéis `anon`/`authenticated` nas tabelas, além do RLS sem política (duas trancas).
 - `python -m app.db.criar_leitor`: usuário `qr_leitor` (lê as visões, grava `rpa_execucoes`, não toca nas tabelas da API).
 - `python -m app.db.limpeza [--simular]`: 90 dias depois de resolvida apaga foto e recortes do Storage e troca a descrição; apaga eventos de som antigos.
 - `python -m app.db.backup`: JSON por tabela em `api/backups/` (fora do Git).

@@ -79,7 +79,7 @@ export const api = {
   detectarFoto: (foto: File) => {
     const fd = new FormData();
     fd.append("foto", foto);
-    return req<VisaoResultado>("/visao/detectar", { method: "POST", body: fd });
+    return req<VisaoResultado>("/visao/detectar", { method: "POST", body: fd }, 25_000); // YOLO + reserva multimodal (até 12 s) + envio da foto
   },
   analisar: (e: ReporteEntrada) => req<AnaliseReporte>("/reportes/analisar", json(e)),
   naoEEmergencia: (nivel: number, tipo: string | null) =>

@@ -23,9 +23,9 @@ YOLO_LIMIAR = float(os.environ["YOLO_LIMIAR"]) if os.getenv("YOLO_LIMIAR") else 
 
 # Reserva multimodal da foto do cidadão: entra quando o YOLO não acha nada (fio, lixo, poste, árvore, alagamento...).
 VISAO_RESERVA = os.getenv("VISAO_RESERVA", "off")                    # off | mock | gemini
-VISAO_RESERVA_MODELO = os.getenv("VISAO_RESERVA_MODELO", "gemini-3.5-flash,gemini-3.8-flash,gemini-3.5-flash-lite")  # lista: tenta o próximo se um estiver sobrecarregado ou sem cota
+VISAO_RESERVA_MODELO = os.getenv("VISAO_RESERVA_MODELO", "gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.8-flash")  # lista: tenta o próximo se um estiver sobrecarregado, lento ou sem cota. O lite vem 1º: no teste de 12/11 respondeu em 1,4 s, o flash travou e o 3.8 estava sobrecarregado
 VISAO_RESERVA_CHAVE = os.getenv("VISAO_RESERVA_CHAVE", "") or os.getenv("LLM_API_KEY", "")  # vazio = usa a chave do LLM
-VISAO_RESERVA_TIMEOUT = float(os.getenv("VISAO_RESERVA_TIMEOUT", "8"))
+VISAO_RESERVA_TIMEOUT = float(os.getenv("VISAO_RESERVA_TIMEOUT", "12"))  # total, somando os modelos da lista
 
 CORS_ORIGINS = _lista("CORS_ORIGINS", "http://localhost:3000")
 LIMIAR_CONFIANCA = float(os.getenv("LIMIAR_CONFIANCA", "0.5"))  # abaixo disso: confiança baixa, pede confirmação

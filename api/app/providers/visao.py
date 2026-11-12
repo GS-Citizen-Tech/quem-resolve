@@ -201,6 +201,7 @@ def detectar_cidadao(imagem: bytes) -> VisaoResultado:
         deteccoes = reserva.classificar(im)
     except ErroReserva as e:
         log.warning("%s", e)  # sem reserva o app segue como antes: só o texto do cidadão
-        return resultado
+        # latência real (YOLO + a espera pela reserva), para a tela de qualidade mostrar o custo da falha
+        return resultado.model_copy(update={"latencia_ms": round((time.perf_counter() - inicio) * 1000, 1)})
     return VisaoResultado(deteccoes=deteccoes, modelo=f"{resultado.modelo} + {reserva.nome}",
                           latencia_ms=round((time.perf_counter() - inicio) * 1000, 1))

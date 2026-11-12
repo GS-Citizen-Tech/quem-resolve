@@ -95,8 +95,9 @@ class MockReserva:
 
 
 class GeminiReserva:
-    """`modelo` aceita uma lista separada por vírgula: se o primeiro estiver sobrecarregado (429/5xx), tenta o próximo,
-    sempre dentro do mesmo tempo máximo."""
+    """`modelo` aceita uma lista separada por vírgula: se o primeiro estiver sobrecarregado (429/5xx) ou demorar
+    demais, tenta o próximo, sempre dentro do mesmo tempo máximo. Enquanto houver outro modelo na lista, cada um usa
+    no máximo 60% do tempo que sobra, para o próximo ainda ter chance."""
 
     def __init__(self, modelo: str, chave: str, timeout: float, transporte=None):
         if not chave:
@@ -130,18 +131,24 @@ class GeminiReserva:
         corpo, fim = self._corpo(im), time.monotonic() + self.timeout
         erro = None
         with httpx.Client(transport=self.transporte) as c:
-            for modelo in self.modelos:
+            for i, modelo in enumerate(self.modelos):
                 resta = fim - time.monotonic()
                 if resta < 0.5:
                     break
+                ultimo = i == len(self.modelos) - 1
+                limite = resta if ultimo else max(min(resta, 3.0), resta * 0.6)
+                t0 = time.monotonic()
                 try:
-                    r = c.post(URL_GEMINI.format(modelo=modelo), json=corpo, headers={"x-goog-api-key": self.chave}, timeout=resta)
+                    r = c.post(URL_GEMINI.format(modelo=modelo), json=corpo, headers={"x-goog-api-key": self.chave}, timeout=limite)
                     if r.status_code == 429 or r.status_code >= 500:
                         erro = f"{modelo} respondeu {r.status_code}"
                         continue  # sobrecarregado: tenta o próximo modelo da lista
                     r.raise_for_status()
                     partes = r.json()["candidates"][0]["content"]["parts"]
                     texto = "".join(p.get("text", "") for p in partes if not p.get("thought"))
+                except httpx.TimeoutException:
+                    erro = f"{modelo} não respondeu em {time.monotonic() - t0:.1f} s"
+                    continue  # demorou: tenta o próximo modelo com o tempo que sobra
                 except (httpx.HTTPError, KeyError, IndexError, ValueError) as e:
                     raise ErroReserva(f"Reserva multimodal falhou ({modelo}): {e}") from e
                 self.nome = modelo
