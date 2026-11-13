@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **0.9** · 12/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **1.0** · 13/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -38,7 +38,7 @@ Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é
 | F | Métricas do console | `GET /ocorrencias/metricas` | Front End (Plotly) | Ian | Console |
 | G | Assistente RAG | `POST /assistente/perguntar` | Generative AI | Parceiro | Front (chat), voz |
 | H | Assistente de voz | `POST /voz/conversar` | PLN | Parceiro | Front |
-| I | Frota (ônibus) | `POST /frota/passagens` | Visão Computacional + Cluster | Ian | Console (mapa e cobertura) |
+| I | Frota (ônibus) | `POST /frota/passagens`, `POST /frota/processamentos` (v1.0) | Visão Computacional + Cluster | Ian | Console (mapa e cobertura) |
 | J | IoT OuviAí | `POST /iot/eventos`, `GET /iot/eventos` | IoT | Ian | Front (alerta acessível) |
 | K | Saúde da API | `GET /health` | — | Ian | Todos (mostra o que é mock e o que é real) |
 | L | Feedback do cidadão | `POST /feedback` | Front End (HITL) | Ian | Front, qualidade da IA |
@@ -375,7 +375,7 @@ Saída:
 
 ## I. Frota (ônibus)
 
-`POST /frota/passagens` → `201` · enviado pelo processador de vídeo (Colab ou workers), **nunca** pelo front
+`POST /frota/passagens` → `201` · enviado pelo processador que roda no ônibus (`frota/processar_video.py`), **nunca** pelo front. Para o console processar o vídeo, veja **I.2** (v1.0).
 
 Entrada:
 ```json
@@ -407,6 +407,31 @@ Saída:
 - `GET /frota/passagens` → lista das passagens para o mapa de cobertura.
 - **Possivelmente resolvida (v0.8):** antes de gravar as detecções, a API olha as ocorrências abertas (`pendente_envio` ou `enviada`) de categorias que a visão detecta, criadas antes do início da passagem. Se o trajeto passou a até **25 m** dela e **nenhuma** detecção da mesma categoria caiu a até 25 m, o status vira `possivelmente_resolvida`. A saída ganha `"possivelmente_resolvidas": 1`.
 - Na simulação (`SEED > 0`), a API cria 3 passagens de exemplo (linhas 3789-10 e 8000-10) para o console não abrir vazio.
+
+### I.2 Processar vídeo ou fotos pelo console (v1.0)
+
+O gestor envia, na tela **Frota**, um vídeo curto ou uma sequência de fotos. A API processa em segundo plano com o **mesmo núcleo** do script do ônibus (`app/pipelines/frota_video.py`) e, no fim, chama a mesma ingestão de `POST /frota/passagens`. Todas as rotas **exigem login do gestor**.
+
+`POST /frota/processamentos` → `202` · `multipart/form-data`
+- `arquivos`: **1 vídeo** (MP4, MOV, WebM, M4V, AVI, MKV; até 80 MB, `FROTA_MAX_MB`) **ou** até 60 fotos (JPG, PNG, WebP; 8 MB cada), na ordem da sequência. Misturar vídeo e foto → `422`.
+- `linha_onibus` (texto, padrão `8000-10`) e `gpx` (opcional; sem ele, trajeto simulado na Av. Paulista).
+- Vídeo: analisa 3 quadros por segundo, só os primeiros **60 s** (`FROTA_MAX_SEGUNDOS`; o resto é ignorado e a resposta avisa). Fotos: 2 fotos = 1 s.
+- Uma fila, um por vez. Com 3 na fila → `429`. Arquivo maior que o limite → `413`.
+
+Resposta (e `GET /frota/processamentos/{id}`): `Processamento`
+```json
+{
+  "id": "3f9c0a12b7de", "status": "processando", "criado_em": "2026-11-13T19:45:02Z", "enviado_por": "marina",
+  "linha_onibus": "875A-10", "tipo": "fotos", "arquivos": 20, "nome": "000.jpg",
+  "progresso": 0.45, "quadros_processados": 9, "quadros_total": 20, "mensagem": null,
+  "resultado": null, "metricas": null, "danos": [], "video_disponivel": false, "video_tipo": null
+}
+```
+- `status`: `na_fila` → `processando` → `concluido` ou `erro` (com o motivo em `mensagem`).
+- Em `concluido`: `resultado` é o mesmo `ResultadoIngestao` de `POST /frota/passagens`; `metricas` traz FPS, latências (quadro, detecção, borrar), `tempo_real`, `danos_unicos`, `regioes_borradas`; `danos` lista `{id, classe, dano, quadros, conf_max, t_s, lat, lon}`.
+- `GET /frota/processamentos` → os últimos (até 5 guardados), do mais novo ao mais antigo.
+- `GET /frota/processamentos/{id}/video` → vídeo anotado **já borrado**, em `video/webm` (VP8, toca no navegador; se o OpenCV da máquina não tiver VP8, cai para `video/mp4`). `404` se não houver.
+- **Privacidade:** o arquivo enviado é apagado assim que o processamento termina (com sucesso ou erro). Ficam só o vídeo anotado e os recortes, borrados. Tudo em pasta temporária (`FROTA_PASTA`): some quando a API reinicia.
 
 ---
 
@@ -533,4 +558,5 @@ Saída:
 | 0.6 | 10/11/2026 | Ian | Visão (C): reserva multimodal (Gemini Flash) quando o YOLO não acha nada; `Deteccao` ganha `origem` e `descricao`, `bbox` vira opcional |
 | 0.7 | 11/11/2026 | Ian | Assistente (G) e voz (H): campo `guardrail` na resposta quando o guardrail dispara; voz aceita `audio/mp4` (iPhone). Nada muda para o RAG e a voz do parceiro |
 | 0.8 | 12/11/2026 | Ian | Console (F3): `GET /ocorrencias` e `/metricas` exigem login (robô usa a chave); gestor só altera o próprio órgão (`403`); `GET /qualidade` (N); frota marca `possivelmente_resolvida` (25 m) e a simulação cria 3 passagens. O robô de RPA continua igual |
+| 1.0 | 13/11/2026 | Ian | Frota (I.2): o console processa vídeo curto ou fotos em segundo plano (`POST/GET /frota/processamentos`, vídeo anotado em WebM), com o mesmo núcleo do script do ônibus. `POST /frota/passagens` não muda |
 | 0.9 | 12/11/2026 | Ian | Banco (B1–B3): `foto_base64` no `POST /ocorrencias` (borrada e guardada no Storage privado), `foto_url` só para o gestor (link temporário), `GET /ocorrencias/{id}/historico`, `observacao` do `PATCH` vai para o histórico, `/feedback` devolve um `id` próprio, `503` com o banco fora, `banco`/`fotos` no `/health` e em `/qualidade`. Robô de RPA: mesma API, mais as visões SQL opcionais |

@@ -85,6 +85,20 @@ export interface PassagemResumo {
   linha_onibus: string; inicio: string; fim: string; trajeto: [number, number][]; deteccoes: number; fps: number | null;
   possivelmente_resolvidas?: number; // v0.8
 }
+export interface ResultadoIngestao { passagem_id: string; novas_ocorrencias: number; associadas_a_existentes: number; possivelmente_resolvidas: number }
+export interface DanoProcessado { id: number; classe: string; dano: string | null; quadros: number; conf_max: number; t_s: number; lat: number; lon: number }
+/** v1.0: vídeo curto ou fotos enviados pelo gestor na tela Frota, processados em segundo plano pela API. */
+export interface Processamento {
+  id: string; status: "na_fila" | "processando" | "concluido" | "erro"; criado_em: string; enviado_por: string;
+  linha_onibus: string; tipo: "video" | "fotos"; arquivos: number; nome: string;
+  progresso: number; quadros_processados: number; quadros_total: number; mensagem: string | null;
+  resultado: ResultadoIngestao | null; danos: DanoProcessado[]; video_disponivel: boolean; video_tipo: string | null;
+  metricas: {
+    tipo?: string; duracao_s?: number; resolucao_processada?: string; modelo?: string; limiar?: number; fps_processamento?: number;
+    tempo_total_s?: number; tempo_real?: string; danos_unicos?: number; regioes_borradas?: number; gps?: string; intervalo_quadros_por_s?: number;
+    latencia_quadro_ms?: { media: number; p95: number }; latencia_deteccao_ms?: { media: number; p95: number }; latencia_borrar_ms?: { media: number };
+  } | null;
+}
 
 // J · IoT OuviAí
 export interface EventoSom {

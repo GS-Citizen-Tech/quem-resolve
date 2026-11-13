@@ -4,6 +4,16 @@ Simula a câmera de um ônibus: lê um vídeo de rua (ou uma sequência de fotos
 (`api/modelos/rdd2022-n-r2.onnx`), borra rostos, pessoas e placas, junta o mesmo dano visto em quadros seguidos e manda a passagem
 para `POST /frota/passagens`. As ocorrências aparecem no console com `origem: "frota"`. O vídeo bruto nunca vai para a API.
 
+## Dois jeitos de usar (mesmo código)
+
+- **Pelo console (v1.0):** na tela **Frota** do painel do gestor, envie um vídeo curto (até 1 min analisado) ou várias fotos.
+  A API processa em segundo plano, mostra o progresso, o vídeo anotado e coloca os danos no mapa. Nada para instalar além da API.
+- **Dentro do ônibus (este script):** roda no próprio veículo (ou no PC) e só envia o resultado para `POST /frota/passagens`.
+  É o caminho para vídeos longos: nenhum vídeo sai do ônibus.
+
+O núcleo (detecção, borrar, rastreio, GPS, vídeo anotado) mora em `api/app/pipelines/frota_video.py`; o script só lê os
+argumentos e imprime o resumo.
+
 ## Instalar (uma vez)
 
 Usa o mesmo ambiente da API (o OpenCV agora vem nele, porque a API também borra a foto do cidadão):

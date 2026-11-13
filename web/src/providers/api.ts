@@ -1,7 +1,7 @@
 // Cliente HTTP da API FastAPI (camada providers/). O front nunca fala com o LLM: tudo passa por aqui.
 import type {
   AnaliseReporte, AtualizarStatus, Categoria, EventoSom, FeedbackEntrada, FiltrosOcorrencia, HistoricoItem, Mensagem,
-  Metricas, Ocorrencia, OcorrenciaCriar, PassagemResumo, ReporteEntrada, Responsavel, RespostaAssistente,
+  Metricas, Ocorrencia, OcorrenciaCriar, PassagemResumo, Processamento, ReporteEntrada, Responsavel, RespostaAssistente,
   Qualidade, RespostaVoz, Saude, Sessao, VisaoResultado,
 } from "./tipos";
 
@@ -21,7 +21,7 @@ let tokenGestor: string | null = null;
 /** O estado central chama isto ao fazer login/logout do gestor. */
 export function definirToken(t: string | null) { tokenGestor = t; }
 
-async function req<T>(caminho: string, init: RequestInit = {}, limiteMs = TIMEOUT_MS): Promise<T> {
+async function req<T>(caminho: string, init: RequestInit = {}, limiteMs = TIMEOUT_MS, formato: "json" | "blob" = "json"): Promise<T> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), limiteMs);
   const headers = new Headers(init.headers);
@@ -42,10 +42,13 @@ async function req<T>(caminho: string, init: RequestInit = {}, limiteMs = TIMEOU
     if (r.status === 403) throw new ErroAPI(detalhe ?? "Você não tem permissão para isso.", "proibido");
     if (r.status === 404) throw new ErroAPI(detalhe ?? "Não encontramos o que você procurou.", "nao_encontrado");
     if (r.status === 413 || r.status === 415) throw new ErroAPI(detalhe ?? "Arquivo não aceito.", "validacao");
-    if (r.status === 422) throw new ErroAPI("Algum campo não está certo. Confira e tente de novo.", "validacao");
+    // Frota (v1.0): a API explica o que está errado no envio (formato, mistura de vídeo e fotos, limite). Nas outras rotas, mensagem geral.
+    if (r.status === 422) throw new ErroAPI((caminho.startsWith("/frota/") && detalhe) || "Algum campo não está certo. Confira e tente de novo.", "validacao");
+    if (r.status === 429) throw new ErroAPI(detalhe ?? "Muitos pedidos ao mesmo tempo. Espere um pouco e tente de novo.", "validacao");
     throw new ErroAPI("Tivemos um problema do nosso lado. Tente de novo em instantes.", "servidor");
   }
   if (r.status === 204) return undefined as T;
+  if (formato === "blob") return (await r.blob()) as T;
   try {
     return (await r.json()) as T;
   } catch {
@@ -105,6 +108,18 @@ export const api = {
 
   // I · frota · J · IoT
   passagens: () => req<Record<string, PassagemResumo>>("/frota/passagens"),
+  // I · frota pelo console (v1.0): vídeo curto ou fotos, processados em segundo plano
+  processarFrota: (arquivos: File[], linha: string, gpx?: File | null) => {
+    const fd = new FormData();
+    arquivos.forEach((a) => fd.append("arquivos", a, a.name));
+    fd.append("linha_onibus", linha);
+    if (gpx) fd.append("gpx", gpx, gpx.name);
+    return req<Processamento>("/frota/processamentos", { method: "POST", body: fd }, 180_000); // só o envio; o processamento segue depois
+  },
+  processamentos: () => req<Processamento[]>("/frota/processamentos"),
+  processamento: (id: string) => req<Processamento>(`/frota/processamentos/${encodeURIComponent(id)}`),
+  /** O vídeo exige login, então vem por fetch (com o token) e vira um blob: URL para o <video>. */
+  videoProcessamento: (id: string) => req<Blob>(`/frota/processamentos/${encodeURIComponent(id)}/video`, {}, 60_000, "blob"),
   eventosSom: (limite = 5) => req<EventoSom[]>(`/iot/eventos?limite=${limite}`),
 
   // L · feedback · M · login

@@ -1,5 +1,6 @@
 "use client";
-// Frota: trajeto de cada passagem de ônibus, o que a câmera detectou, FPS do processamento e os recortes já borrados.
+// Frota: envio de vídeo ou fotos para processar (v1.0), trajeto de cada passagem de ônibus, o que a câmera detectou,
+// FPS do processamento e os recortes já borrados.
 // Quando o ônibus passa perto de um problema aberto e não o vê mais, ele vira "possivelmente resolvida" (regra da API, 25 m).
 import { Bus, Gauge, ScanSearch, TriangleAlert } from "lucide-react";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import { Indicador } from "@/ui/Indicador";
 import { LegendaMapa, MapaOcorrencias, tomDaOcorrencia, type PontoMapa, type TrajetoMapa } from "@/ui/MapaOcorrencias";
 import { SeloOrigem, SeloStatus } from "@/ui/Selo";
 import { CabecalhoTela, ErroConsulta } from "./Comum";
+import { EnvioFrota } from "./EnvioFrota";
 import { agrupar } from "./Filas";
 import { coord, dataCurta, useBase, useConsulta } from "./hooks";
 
@@ -47,11 +49,12 @@ export function Frota() {
 
   return (
     <>
-      <CabecalhoTela titulo="Frota" descricao="O que as câmeras dos ônibus detectaram. O vídeo é processado fora da API e só chegam as detecções e os recortes já borrados."
+      <CabecalhoTela titulo="Frota" descricao="Envie o vídeo de uma câmera de ônibus para processar aqui, ou veja o que os ônibus já detectaram. Só ficam as detecções, os recortes e o vídeo anotado, todos borrados."
         atualizar={atualizar} carregando={carregando} />
       {erro && <ErroConsulta erro={erro} tentar={atualizar} temDados={!!dados} />}
+      <EnvioFrota aoConcluir={(id) => { setPassagem(id); atualizar(); }} />
       {!dados ? (!erro && <div className="glass rounded-panel p-6"><Carregando texto="Carregando as passagens…" /></div>) : ps.length === 0 ? (
-        <Vazio titulo="Nenhuma passagem de ônibus ainda" texto="Rode o frota/processar_video.py para enviar uma passagem." />
+        <Vazio titulo="Nenhuma passagem de ônibus ainda" texto="Envie um vídeo ou fotos acima. O script frota/processar_video.py (versão dentro do ônibus) também envia passagens." />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -120,7 +123,7 @@ export function Frota() {
                   </li>
                 ))}
               </ul>
-            ) : <p className="text-sm text-ink-muted">As passagens de exemplo não têm recorte. Eles aparecem quando o processar_video.py envia uma passagem de verdade.</p>}
+            ) : <p className="text-sm text-ink-muted">As passagens de exemplo não têm recorte. Eles aparecem quando você processa um vídeo ou fotos acima.</p>}
           </section>
         </>
       )}

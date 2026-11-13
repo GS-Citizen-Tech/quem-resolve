@@ -46,3 +46,10 @@ GESTORES = _lista("GESTORES", "marina:demo-123:subprefeitura:Marina,joao:demo-12
 AUTH_SEGREDO = os.getenv("AUTH_SEGREDO", "troque-este-segredo-em-producao")
 AUTH_HORAS = int(os.getenv("AUTH_HORAS", "8"))
 ROBO_CHAVE = os.getenv("ROBO_CHAVE", "")  # chave do robô de RPA (vazia = robô desligado)
+
+# Frota pelo console (v1.0): vídeo curto ou fotos enviados pelo gestor e processados em segundo plano na API.
+FROTA_PASTA = os.getenv("FROTA_PASTA", "")                              # vazio = pasta temporária do sistema
+FROTA_MAX_MB = int(os.getenv("FROTA_MAX_MB", "80"))                     # tamanho máximo do vídeo
+FROTA_MAX_SEGUNDOS = float(os.getenv("FROTA_MAX_SEGUNDOS", "60"))       # vídeo mais longo: processa só o começo
+FROTA_MAX_FOTOS = int(os.getenv("FROTA_MAX_FOTOS", "60"))
+FROTA_FOTOS_POR_S = float(os.getenv("FROTA_FOTOS_POR_S", "2"))          # sequência de fotos: 2 fotos = 1 s no vídeo anotado
