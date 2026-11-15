@@ -28,6 +28,7 @@ Os módulos do parceiro entram na API trocando o mock pela implementação real,
 | `docs/CONTRATOS.md` | Contratos da API v0.9 (endpoints A a N, JSON de entrada e saída, dono de cada módulo) |
 | `docs/PLANO-BANCO.md` | Banco v1.0: Supabase (Postgres + Storage), tabelas, visões, LGPD, resultado B1–B3. Guias: `SUPABASE-PASSO-A-PASSO.md` (Ian) e `BANCO-PARCEIRO.md` |
 | `docs/PLANO-FRONT.md` | Plano do front v0.3: telas, componentes, estado, falhas, acessibilidade, barema da disciplina 04, fases F0–F5, decisões |
+| `docs/ROADMAP-QUANTICO.md` | Disciplina 03: gargalo (priorização/despacho e cobertura da frota), otimização quântica híbrida, roadmap 2026→2034+ com portões, PQC, ética/LGPD/ODS |
 | `docs/EXEMPLOS-FLUXO.md` | Jornada da Dona Cida (cidadão) e da Marina (gestão), com os desvios |
 | `docs/design-system/` | Cópia do design system (fonte da verdade: https://claude.ai/artifact/H7gZMbBkjfYbmLw9Qf1nLr). `README.md` = brand book + CSS Tailwind v4; `componentes/*.md` = regras de cada componente |
 | `../GS Citizen Tech - matérias/` (se existir) ou o Portal | Enunciados originais das disciplinas |
