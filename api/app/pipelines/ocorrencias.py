@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 from app.providers import base_conhecimento as base
-from app.providers import repositorio
+from app.providers import distritos, repositorio
 from app.schemas.base import Origem
 from app.schemas.ocorrencia import Ocorrencia, OcorrenciaCriar
 
@@ -23,6 +23,8 @@ def _prioridade(categoria_id: str, tamanho_grupo: int, origem: Origem) -> int:
     cat = base.categoria(categoria_id)
     p = 2 + {"sim": 2, "depende": 1, "nao": 0}[cat.emergencia]
     if tamanho_grupo >= 3 or origem == "ambos":
+        p += 1
+    if tamanho_grupo >= 6:  # v1.3: muita gente no mesmo problema sobe mais um degrau
         p += 1
     return min(p, 5)
 
@@ -76,6 +78,15 @@ def registrar(dados: OcorrenciaCriar, origem: Origem = "cidadao", criada_em: dat
     return repositorio.salvar_ocorrencia(o)
 
 
+def com_distrito(o: Ocorrencia) -> Ocorrencia:
+    """v1.3: o distrito sai da coordenada na hora (nada a migrar no banco)."""
+    return o.model_copy(update={"distrito": distritos.distrito_de(o.lat, o.lon)})
+
+
 def filtrar(categoria: str | None = None, responsavel: str | None = None, origem: str | None = None,
-            status: str | None = None, limite: int | None = None) -> list[Ocorrencia]:
-    return repositorio.ocorrencias(categoria=categoria, responsavel=responsavel, origem=origem, status=status, limite=limite)
+            status: str | None = None, limite: int | None = None, distrito: str | None = None) -> list[Ocorrencia]:
+    if not distrito:
+        return [com_distrito(o) for o in repositorio.ocorrencias(categoria=categoria, responsavel=responsavel, origem=origem, status=status, limite=limite)]
+    todas = (com_distrito(o) for o in repositorio.ocorrencias(categoria=categoria, responsavel=responsavel, origem=origem, status=status))
+    res = [o for o in todas if o.distrito == distrito]
+    return res[:limite] if limite else res

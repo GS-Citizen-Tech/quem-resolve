@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **1.2** · 15/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **1.3** · 15/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -44,7 +44,7 @@ Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é
 | L | Feedback do cidadão | `POST /feedback` | Front End (HITL) | Ian | Front, qualidade da IA |
 | M | Login do gestor | `POST /auth/login` | Front End (perfis) | Ian | Console da gestão |
 | N | Qualidade da IA | `GET /qualidade` | Front End + Governança | Ian | Console (tela Qualidade) |
-| O | Endereço (v1.1) | `GET /geo/endereco`, `GET /geo/buscar` | Front End (múltiplas fontes de dados) | Ian | Front (tela inicial e Reportar) |
+| O | Endereço (v1.1) e bairros (v1.3) | `GET /geo/endereco`, `GET /geo/buscar`, `GET /geo/distritos`, `GET /geo/distritos.geojson` | Front End (múltiplas fontes de dados) | Ian | Front (tela inicial e Reportar) |
 
 > **Computação Quântica** não tem endpoint: é roadmap sem código. Os dados de `GET /ocorrencias` e `GET /frota/passagens` servem de exemplo real do gargalo (quais ônibus equipar, como priorizar a fila).
 
@@ -265,17 +265,19 @@ Saída (`Ocorrencia`):
   "origem": "cidadao",
   "grupo_duplicata_id": null,
   "foto_url": null,
-  "corrigida_pelo_gestor": false
+  "corrigida_pelo_gestor": false,
+  "distrito": "se"
 }
 ```
 
+- `distrito` (v1.3): id do distrito oficial onde o ponto cai (malha do IBGE, ver O.2). Calculado na hora pela coordenada, não fica no banco. `null` se o ponto cair fora dos 96 distritos ou a malha não estiver instalada.
 - `corrigida_pelo_cidadao` = `categoria_sugerida` ≠ `categoria_final` (mede a qualidade da IA).
 - `status`: `pendente_envio` → `enviada` → `possivelmente_resolvida` → `resolvida`.
 - `origem`: `cidadao`, `frota` ou `ambos`.
-- `prioridade`: 1 a 5 (risco da categoria + recorrência + frota e cidadão juntos).
+- `prioridade`: 1 a 5 (risco da categoria + recorrência + frota e cidadão juntos). Recorrência: +1 com 3 reportes no grupo, +1 de novo com 6 (v1.3).
 - Duplicata: mesma categoria a até 50 m de uma ocorrência aberta → mesmo `grupo_duplicata_id`.
 
-`GET /ocorrencias?categoria=&responsavel=&origem=&status=&limite=500` → lista de `Ocorrencia` · **exige login do gestor** (ou a chave do robô de RPA). Sem login → `401`. A lista tem descrição e localização de quem reportou (LGPD).
+`GET /ocorrencias?categoria=&responsavel=&origem=&status=&distrito=&limite=500` → lista de `Ocorrencia` · **exige login do gestor** (ou a chave do robô de RPA). Sem login → `401`. A lista tem descrição e localização de quem reportou (LGPD).
 
 - **`foto_url` (v0.9):** nas respostas sem login (`POST` e `GET /ocorrencias/{id}`) vem sempre `null`. Para o gestor (lista e `PATCH`) é um **link temporário** do Storage (vale 1 hora, `LINK_FOTO_MINUTOS`), ou o recorte já borrado da frota. Sem banco, é um `data:` URL.
 
@@ -305,7 +307,7 @@ Saída (`Ocorrencia`):
 
 ## F. Métricas do console
 
-`GET /ocorrencias/metricas?categoria=&responsavel=&origem=` (os mesmos filtros da lista) · **exige login do gestor** (v0.8)
+`GET /ocorrencias/metricas?categoria=&responsavel=&origem=&distrito=` (os mesmos filtros da lista; `distrito` desde a v1.3) · **exige login do gestor** (v0.8)
 
 ```json
 {
@@ -560,6 +562,19 @@ Erros: `422` = coordenada fora da Grande SP ou busca curta demais · `503` = Ope
 
 O endereço escolhido vai junto no reporte no fim da `descricao` (`"… (Local: Rua Augusta, 900, Consolação)"`), como já acontecia com o antigo campo "Rua ou ponto de referência", que saiu do app. `POST /ocorrencias` não muda.
 
+### O.2 Bairros: os 96 distritos de São Paulo (v1.3)
+
+Fonte: limites oficiais dos distritos da **Prefeitura de São Paulo (GeoSampa, dado aberto)**, já no repositório em `api/app/data/distritos_sp.geojson` (~140 KB, simplificado ~25 m). A API só lê o arquivo: funciona sem internet. Se o arquivo faltar, a API tenta baixar a malha do IBGE (município 3550308) em segundo plano e de novo quando o mapa pedir (no máximo a cada 2 min). `scripts/baixar_distritos.py` baixa de novo à mão; `DISTRITOS_ARQUIVO` usa outro arquivo; `DISTRITOS_BAIXAR=0` desliga o download.
+
+`GET /geo/distritos` → `200` · aberto, em ordem alfabética (lista vazia se a malha não estiver instalada):
+```json
+[ { "id": "itaquera", "nome": "Itaquera" }, { "id": "se", "nome": "Sé" } ]
+```
+
+`GET /geo/distritos.geojson` → `200` · `FeatureCollection` com as fronteiras simplificadas; cada `properties` tem `id`, `nome`, `codigo` e `subprefeitura`. Cache de 1 dia. `503` = o IBGE ainda não respondeu (o mapa segue só com as bolas e tenta de novo sozinho).
+
+O console pinta cada distrito pelo número de problemas abertos e, ao escolher um, filtra a lista com `?distrito=<id>`. A contagem por bairro é feita no front, com a mesma lista de `GET /ocorrencias`.
+
 ---
 
 ## Para o parceiro decidir na revisão
@@ -588,3 +603,4 @@ O endereço escolhido vai junto no reporte no fim da `descricao` (`"… (Local: 
 | 0.9 | 12/11/2026 | Ian | Banco (B1–B3): `foto_base64` no `POST /ocorrencias` (borrada e guardada no Storage privado), `foto_url` só para o gestor (link temporário), `GET /ocorrencias/{id}/historico`, `observacao` do `PATCH` vai para o histórico, `/feedback` devolve um `id` próprio, `503` com o banco fora, `banco`/`fotos` no `/health` e em `/qualidade`. Robô de RPA: mesma API, mais as visões SQL opcionais |
 | 1.1 | 15/11/2026 | Ian | Endereço (O): `GET /geo/endereco` e `GET /geo/buscar` com OpenStreetMap/Nominatim pela API. O campo "Rua ou ponto de referência" sai do app; o endereço do mapa vai no fim da descrição |
 | 1.2 | 15/11/2026 | Ian | Análise (D): LLM real com o Gemini (`LLM_PROVIDER=gemini`), JSON preso a esquema e validado em `AnaliseLLM`; lê todo relato e a explicação usa a frase dele. Formato da resposta não muda |
+| 1.3 | 15/11/2026 | Ian | Bairros (O.2): `GET /geo/distritos` e `/geo/distritos.geojson` (malha do IBGE, baixada pela API sozinha); dados de exemplo trocados sozinhos na subida (tabela `meta_app`); campo `distrito` em `Ocorrencia`; filtro `?distrito=` na lista e nas métricas; prioridade sobe mais um degrau com 6 reportes no grupo |

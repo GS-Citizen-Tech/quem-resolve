@@ -1,7 +1,7 @@
 """Armazenamento da API (fachada). Sem DATABASE_URL: memória (app/db/memoria.py), a API sobe sem banco.
 Com DATABASE_URL: Postgres/Supabase (app/db/postgres.py). As duas têm as mesmas funções:
 
-  ciclo de vida   preparar, saude, marcar_simuladas, limpar (testes)
+  ciclo de vida   preparar, saude, marcar_simuladas, apagar_simuladas, meta, gravar_meta, limpar (testes)
   ocorrências     salvar_ocorrencia (cria ou atualiza), ocorrencia, ocorrencias(filtros), registrar_historico, historico
   frota           salvar_passagem(pid, dados, deteccoes), passagens, deteccoes
   IoT e medições  salvar_evento_som, eventos_som, registrar_guardrail, registros_guardrail, salvar_feedback, feedbacks,

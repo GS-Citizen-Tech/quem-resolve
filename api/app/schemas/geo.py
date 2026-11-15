@@ -11,6 +11,11 @@ class Endereco(BaseModel):
     fonte: str = "OpenStreetMap"
 
 
+class Distrito(BaseModel):
+    id: str = Field(description='Ex.: "itaquera"')
+    nome: str
+
+
 class ResultadoBusca(BaseModel):
     texto_curto: str
     bairro: str | None = None

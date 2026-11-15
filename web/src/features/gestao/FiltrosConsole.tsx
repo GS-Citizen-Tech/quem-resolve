@@ -2,9 +2,9 @@
 // Filtros do console (categoria, órgão, origem e status). Ficam na URL: a tela muda na hora e o link pode ser compartilhado.
 import { FilterX } from "lucide-react";
 import { useId } from "react";
-import { NOME_ORIGEM, NOME_STATUS, useBase, useFiltros, type ChaveFiltro } from "./hooks";
+import { NOME_ORIGEM, NOME_STATUS, useBase, useDistritos, useFiltros, type ChaveFiltro } from "./hooks";
 
-const ROTULO: Record<ChaveFiltro, string> = { categoria: "Categoria", responsavel: "Órgão responsável", origem: "Origem", status: "Status" };
+const ROTULO: Record<ChaveFiltro, string> = { categoria: "Categoria", responsavel: "Órgão responsável", origem: "Origem", status: "Status", distrito: "Bairro (distrito)" };
 
 export function FiltrosConsole({ mostrar = ["categoria", "responsavel", "origem"], padroes = {} }: {
   mostrar?: ChaveFiltro[];
@@ -14,12 +14,14 @@ export function FiltrosConsole({ mostrar = ["categoria", "responsavel", "origem"
   const id = useId();
   const { filtros, definir, limpar, ativos } = useFiltros();
   const { categorias, responsaveis } = useBase();
+  const { distritos } = useDistritos();
 
   const opcoes: Record<ChaveFiltro, { valor: string; rotulo: string }[]> = {
     categoria: [...categorias].sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => ({ valor: c.id, rotulo: c.nome })),
     responsavel: [...responsaveis].sort((a, b) => a.nome.localeCompare(b.nome)).map((r) => ({ valor: r.id, rotulo: r.nome })),
     origem: (Object.keys(NOME_ORIGEM) as (keyof typeof NOME_ORIGEM)[]).map((o) => ({ valor: o, rotulo: NOME_ORIGEM[o] })),
     status: (Object.keys(NOME_STATUS) as (keyof typeof NOME_STATUS)[]).map((s) => ({ valor: s, rotulo: NOME_STATUS[s] })),
+    distrito: distritos.map((d) => ({ valor: d.id, rotulo: d.nome })),
   };
 
   return (
@@ -32,7 +34,7 @@ export function FiltrosConsole({ mostrar = ["categoria", "responsavel", "origem"
             <label htmlFor={`${id}-${k}`} className="text-xs font-semibold text-ink-muted">{ROTULO[k]}</label>
             <select id={`${id}-${k}`} value={atual} onChange={(e) => definir(k, e.target.value || (padrao ? "todos" : undefined))}
               className="min-h-console w-full cursor-pointer rounded-chip border-[1.5px] border-line-strong bg-surface-raised px-2.5 text-sm text-ink sm:w-52">
-              <option value={padrao ? "todos" : ""}>{k === "responsavel" ? "Todos os órgãos" : k === "status" ? "Todos os status" : "Todas"}</option>
+              <option value={padrao ? "todos" : ""}>{k === "responsavel" ? "Todos os órgãos" : k === "status" ? "Todos os status" : k === "distrito" ? "Toda a cidade" : "Todas"}</option>
               {opcoes[k].map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
             </select>
           </div>
@@ -52,9 +54,10 @@ export function FiltrosConsole({ mostrar = ["categoria", "responsavel", "origem"
 export function VazioFiltrado({ total }: { total?: number }) {
   const { filtros, definir, limpar } = useFiltros();
   const { nomeCategoria, nomeOrgao } = useBase();
+  const { nomeDistrito } = useDistritos();
   const ativos = (Object.keys(ROTULO) as ChaveFiltro[]).filter((k) => filtros[k] && filtros[k] !== "todos");
   const valor = (k: ChaveFiltro, v: string) =>
-    k === "categoria" ? nomeCategoria(v) : k === "responsavel" ? nomeOrgao(v) : k === "origem" ? NOME_ORIGEM[v as keyof typeof NOME_ORIGEM] : NOME_STATUS[v as keyof typeof NOME_STATUS];
+    k === "categoria" ? nomeCategoria(v) : k === "distrito" ? nomeDistrito(v) : k === "responsavel" ? nomeOrgao(v) : k === "origem" ? NOME_ORIGEM[v as keyof typeof NOME_ORIGEM] : NOME_STATUS[v as keyof typeof NOME_STATUS];
   return (
     <div className="grid justify-items-start gap-2 rounded-card border-2 border-dashed border-line-strong px-5 py-6">
       <p className="text-base font-semibold">Nenhuma ocorrência com esses filtros{total ? ` (de ${total} no total)` : ""}.</p>

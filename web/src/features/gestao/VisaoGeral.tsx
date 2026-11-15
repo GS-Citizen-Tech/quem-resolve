@@ -13,15 +13,15 @@ import { NOME_ORIGEM, pct, useBase, useConsulta, useFiltros } from "./hooks";
 export function VisaoGeral() {
   const { filtros, definir, consulta } = useFiltros();
   const { nomeCategoria } = useBase();
-  const { categoria, responsavel, origem } = consulta();
-  const chave = JSON.stringify({ categoria, responsavel, origem });
-  const { dados: m, erro, carregando, atualizar } = useConsulta<Metricas>(() => api.metricas({ categoria, responsavel, origem }), chave);
+  const { categoria, responsavel, origem, distrito } = consulta();
+  const chave = JSON.stringify({ categoria, responsavel, origem, distrito });
+  const { dados: m, erro, carregando, atualizar } = useConsulta<Metricas>(() => api.metricas({ categoria, responsavel, origem, distrito }), chave);
 
   return (
     <>
       <CabecalhoTela titulo="Visão geral" descricao="Ocorrências recebidas pelo app e pelos ônibus. Toque numa barra para filtrar por ela."
         atualizar={atualizar} carregando={carregando}>
-        <FiltrosConsole />
+        <FiltrosConsole mostrar={["categoria", "responsavel", "origem", "distrito"]} />
       </CabecalhoTela>
       {erro && <ErroConsulta erro={erro} tentar={atualizar} temDados={!!m} />}
       {!m ? (!erro && <div className="glass rounded-panel p-6"><Carregando texto="Carregando os números…" /></div>) : (

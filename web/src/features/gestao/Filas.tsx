@@ -49,7 +49,7 @@ export function Filas() {
     <>
       <CabecalhoTela titulo="Filas" atualizar={atualizar} carregando={carregando}
         descricao={`Abre na fila de ${nomeOrgao(orgao)}. Você vê as outras filas, mas só altera as ocorrências do seu órgão.`}>
-        <FiltrosConsole mostrar={["responsavel", "status", "categoria", "origem"]} padroes={{ responsavel: orgao }} />
+        <FiltrosConsole mostrar={["responsavel", "status", "categoria", "origem", "distrito"]} padroes={{ responsavel: orgao }} />
       </CabecalhoTela>
       {erro && <ErroConsulta erro={erro} tentar={atualizar} temDados={!!dados} />}
       {!dados ? (!erro && <div className="glass rounded-panel p-6"><Carregando texto="Carregando a fila…" /></div>)

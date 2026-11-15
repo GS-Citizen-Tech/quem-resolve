@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { api, ErroAPI } from "@/providers/api";
-import type { Categoria, FiltrosOcorrencia, Origem, Responsavel, Status } from "@/providers/tipos";
+import type { Categoria, Distrito, FiltrosOcorrencia, Origem, Responsavel, Status } from "@/providers/tipos";
 
 // ---------- Busca por tela ----------
 
@@ -67,8 +67,8 @@ export function useConsulta<T>(buscar: () => Promise<T>, chave: string) {
 
 // ---------- Filtros na URL ----------
 
-export type ChaveFiltro = "categoria" | "responsavel" | "origem" | "status";
-export const CHAVES_FILTRO: ChaveFiltro[] = ["categoria", "responsavel", "origem", "status"];
+export type ChaveFiltro = "categoria" | "responsavel" | "origem" | "status" | "distrito";
+export const CHAVES_FILTRO: ChaveFiltro[] = ["categoria", "responsavel", "origem", "status", "distrito"];
 
 /** Filtros guardados na URL (?categoria=buraco): trocar de tela mantém o filtro e o link pode ser compartilhado. */
 export function useFiltros() {
@@ -80,6 +80,7 @@ export function useFiltros() {
     responsavel: params.get("responsavel") ?? undefined,
     origem: (params.get("origem") as Origem | null) ?? undefined,
     status: (params.get("status") as Status | null) ?? undefined,
+    distrito: params.get("distrito") ?? undefined,
   }), [params]);
 
   const definir = useCallback((chave: ChaveFiltro, valor: string | undefined) => {
@@ -134,6 +135,17 @@ export function useBase() {
       nomeOrgao: (id: string | null | undefined) => (id ? org.get(id)?.nome ?? id : "—"),
     };
   }, [base]);
+}
+
+/** v1.3: os 96 distritos (bairros oficiais). Sem a malha na API, a lista vem vazia e nada quebra. */
+/** `versao`: muda quando a malha chega (Mapa), para buscar a lista de novo se ela veio vazia. */
+export function useDistritos(versao = "") {
+  const { dados } = useConsulta<Distrito[]>(() => api.distritos().catch(() => []), `distritos${versao}`);
+  return useMemo(() => {
+    const lista = dados ?? [];
+    const m = new Map(lista.map((d) => [d.id, d.nome]));
+    return { distritos: lista, nomeDistrito: (id: string | null | undefined) => (id ? m.get(id) ?? id : "Fora dos distritos") };
+  }, [dados]);
 }
 
 // ---------- Textos comuns ----------

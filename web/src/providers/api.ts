@@ -1,6 +1,6 @@
 // Cliente HTTP da API FastAPI (camada providers/). O front nunca fala com o LLM: tudo passa por aqui.
 import type {
-  AnaliseReporte, AtualizarStatus, Categoria, Endereco, EventoSom, FeedbackEntrada, FiltrosOcorrencia, HistoricoItem, Mensagem,
+  AnaliseReporte, AtualizarStatus, Categoria, Distrito, Endereco, EventoSom, FeedbackEntrada, FiltrosOcorrencia, HistoricoItem, Mensagem,
   Metricas, Ocorrencia, OcorrenciaCriar, PassagemResumo, Processamento, ReporteEntrada, Responsavel, RespostaAssistente,
   Qualidade, RespostaVoz, ResultadoBusca, Saude, Sessao, VisaoResultado,
 } from "./tipos";
@@ -126,6 +126,10 @@ export const api = {
   // Cache por ponto arredondado (~10 m): voltar à mesma tela não pergunta de novo.
   endereco: (lat: number, lon: number) =>
     comCache(`end:${lat.toFixed(4)},${lon.toFixed(4)}`, () => req<Endereco>(`/geo/endereco${qs({ lat: lat.toFixed(6), lon: lon.toFixed(6) })}`, {}, 8_000)),
+  // v1.3 · os 96 distritos (malha do IBGE) para o mapa do console. Quase nunca mudam: cache.
+  // v1.3: na primeira subida a API baixa os bairros do IBGE (pode levar uns segundos); lista vazia não fica em cache.
+  distritos: () => comCache("distritos", () => req<Distrito[]>("/geo/distritos", {}, 45_000).then((l) => { if (!l.length) cache.delete("distritos"); return l; })),
+  malhaDistritos: () => comCache("malha-distritos", () => req<import("geojson").FeatureCollection>("/geo/distritos.geojson", {}, 45_000)),
   buscarEndereco: (q: string) => req<ResultadoBusca[]>(`/geo/buscar${qs({ q })}`, {}, 8_000),
 
   // L · feedback · M · login

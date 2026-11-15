@@ -91,11 +91,34 @@ def saude() -> str:
         return "fora do ar"
 
 
-def marcar_simuladas() -> None:
-    """Chamado logo depois da semente: tudo o que existe é dado de exemplo da demonstração (RF34)."""
+def marcar_simuladas(exceto_ocorrencias: list[str] | None = None, exceto_passagens: list[str] | None = None) -> None:
+    """Chamado logo depois da semente: o que existe é dado de exemplo da demonstração (RF34).
+    `exceto_*`: ids reais que já estavam no banco (troca da simulação, v1.3) e não podem virar simulados."""
     with motor().begin() as c:
-        c.execute(text("update ocorrencias set simulada = true"))
-        c.execute(text("update passagens_frota set simulada = true"))
+        c.execute(text("update ocorrencias set simulada = true where not (id::text = any(cast(:ids as text[])))"), {"ids": exceto_ocorrencias or []})
+        c.execute(text("update passagens_frota set simulada = true where not (id::text = any(cast(:ids as text[])))"), {"ids": exceto_passagens or []})
+
+
+def apagar_simuladas() -> tuple[int, int]:
+    """v1.3: apaga só os dados de exemplo (ocorrências e passagens com simulada = true). Os reais ficam."""
+    with motor().begin() as c:
+        p = c.execute(text("delete from passagens_frota where simulada")).rowcount
+        # descrição "(simulado)": sobras de uma troca interrompida (a API fechada no meio) ainda sem a marca
+        o = c.execute(text("delete from ocorrencias where simulada or descricao like '%(simulado)'")).rowcount
+    return o, p
+
+
+def meta(chave: str) -> str | None:
+    """v1.3: anotação da API (tabela meta_app), ex.: meta("simulacao") → "1.3"."""
+    with motor().connect() as c:
+        return c.execute(text("select valor from meta_app where chave = :c"), {"c": chave}).scalar()
+
+
+def gravar_meta(chave: str, valor: str) -> None:
+    with motor().begin() as c:
+        c.execute(text("""insert into meta_app (chave, valor) values (:c, :v)
+                          on conflict (chave) do update set valor = excluded.valor, atualizada_em = now()"""),
+                  {"c": chave, "v": valor})
 
 
 def limpar() -> None:

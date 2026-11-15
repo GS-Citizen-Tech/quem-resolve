@@ -1,4 +1,4 @@
-// Espelho dos contratos da API (docs/CONTRATOS.md v1.1 e api/app/schemas). Mudou lá, muda aqui.
+// Espelho dos contratos da API (docs/CONTRATOS.md v1.3 e api/app/schemas). Mudou lá, muda aqui.
 
 export type Emergencia = "sim" | "nao" | "depende";
 export type Origem = "cidadao" | "frota" | "ambos";
@@ -58,11 +58,13 @@ export interface Ocorrencia {
   categoria_sugerida: string | null; confianca: number; categoria_final: string; responsavel_id: string;
   corrigida_pelo_cidadao: boolean; corrigida_pelo_gestor: boolean; status: Status; prioridade: number;
   origem: Origem; grupo_duplicata_id: string | null; foto_url: string | null;
+  /** v1.3: id do distrito (malha do IBGE), calculado pela coordenada. */
+  distrito?: string | null;
 }
 /** v0.9 · GET /ocorrencias/{id}/historico (só gestor) */
 export interface HistoricoItem { em: string; quem: string; campo: "status" | "categoria"; de: string | null; para: string | null; observacao: string | null }
 export interface AtualizarStatus { status?: Status; categoria_final?: string; observacao?: string }
-export interface FiltrosOcorrencia { categoria?: string; responsavel?: string; origem?: Origem; status?: Status }
+export interface FiltrosOcorrencia { categoria?: string; responsavel?: string; origem?: Origem; status?: Status; /** v1.3 */ distrito?: string }
 
 // F · Métricas
 export interface Contagem { chave: string; total: number }
@@ -130,3 +132,4 @@ export const nivelConfianca = (c: number): NivelConfianca => (c >= 0.8 ? "alta" 
 // O · Endereço por extenso (v1.1)
 export interface Endereco { texto_curto: string; bairro: string | null; cidade: string | null; rua: string | null; numero: string | null; fonte: string }
 export interface ResultadoBusca { texto_curto: string; bairro: string | null; cidade: string | null; lat: number; lon: number }
+export interface Distrito { id: string; nome: string }

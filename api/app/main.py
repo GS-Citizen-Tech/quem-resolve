@@ -1,5 +1,6 @@
 """API do Quem Resolve. Rodar: uvicorn app.main:app --reload (dentro de api/)."""
 import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -9,21 +10,30 @@ from sqlalchemy.exc import DBAPIError
 
 from app import config
 from app.pipelines import simulacao
-from app.providers import armazenamento, repositorio
+from app.providers import armazenamento, distritos, repositorio
 from app.routers import assistente, base, cidadao, conta, geo, integracoes, ocorrencias
 
 log = logging.getLogger("quem-resolve")
+
+
+def _trocar_simulacao() -> None:
+    try:
+        feito = simulacao.atualizar_se_preciso(config.SEED_OCORRENCIAS)
+        if feito:
+            log.warning("Simulação: %s.", feito)
+    except Exception:  # noqa: BLE001 - dado de exemplo nunca derruba a API; tenta de novo na próxima subida
+        log.exception("Simulação: não deu para trocar os dados de exemplo agora.")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     repositorio.preparar()  # Postgres: migrações + base + gestores. Memória: nada.
     armazenamento.atual.preparar()  # Supabase: cria o bucket privado se faltar
-    if config.SEED_OCORRENCIAS and not repositorio.ocorrencias(limite=1):
-        log.info("Banco vazio: criando %s ocorrências simuladas e 3 passagens da frota.", config.SEED_OCORRENCIAS)
-        simulacao.gerar(config.SEED_OCORRENCIAS)
-        simulacao.gerar_frota()
-        repositorio.marcar_simuladas()
+    if config.SEED_OCORRENCIAS:
+        # Dados de exemplo: cria no banco vazio e troca sozinho os de uma versão antiga (só os simulados).
+        # Em segundo plano: com o banco na nuvem a troca leva alguns minutos e não pode segurar a subida da API.
+        threading.Thread(target=_trocar_simulacao, name="simulacao", daemon=True).start()
+    distritos.garantir_em_segundo_plano()  # 1ª subida: baixa os bairros do IBGE sem atrasar a API
     yield
 
 

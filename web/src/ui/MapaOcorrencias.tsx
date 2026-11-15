@@ -12,7 +12,21 @@ import { useEffect, useRef, useState } from "react";
 import type { Origem } from "@/providers/tipos";
 
 export type TomPonto = "danger" | "warn" | "ok" | "neutro";
-export interface PontoMapa { id: string; lat: number; lon: number; titulo: string; origem: Origem; tom: TomPonto }
+/** `quantidade` (v1.3): quantos reportes do mesmo problema. A bola cresce com ela e mostra o número. */
+export interface PontoMapa { id: string; lat: number; lon: number; titulo: string; origem: Origem; tom: TomPonto; quantidade?: number }
+/** Camada de áreas (v1.3): os distritos pintados por um valor (ex.: problemas abertos). */
+export interface AreasMapa {
+  geojson: import("geojson").FeatureCollection;
+  /** Valor de cada área pelo id (properties.id). Define o tom (0 a 4) pela faixa. */
+  valores: Record<string, number>;
+  faixas: number[];           // limites superiores das faixas 0..3; acima do último = faixa 4
+  selecionada?: string | null;
+  aoEscolher?: (id: string) => void;
+  rotuloDe: (id: string) => string;
+}
+/** Transparência do preenchimento por faixa (o tom é sempre a cor de destaque do tema). */
+export const OPACIDADE_FAIXA = [0.04, 0.16, 0.3, 0.46, 0.64];
+export const faixaDe = (v: number, faixas: number[]) => { const i = faixas.findIndex((f) => v <= f); return i === -1 ? faixas.length : i; };
 export interface TrajetoMapa { id: string; rotulo: string; pontos: [number, number][] }
 
 type L = typeof Leaflet;
@@ -23,13 +37,18 @@ const CENTRO_SP: [number, number] = [-23.5505, -46.6333];
 const lerCor = (nome: string) => getComputedStyle(document.documentElement).getPropertyValue(nome).trim() || "#285a44";
 const corDoTom: Record<TomPonto, string> = { danger: "--qr-danger", warn: "--qr-warn", ok: "--qr-ok", neutro: "--qr-ink-muted" };
 
-function icone(l: L, origem: Origem, tom: TomPonto, grande: boolean) {
-  const t = grande ? 32 : 22;
+function icone(l: L, origem: Origem, tom: TomPonto, grande: boolean, quantidade = 1) {
+  // Área da bola cresce com a raiz do nº de reportes (8 reportes ≈ 2,8× o diâmetro), com teto para não cobrir o bairro.
+  const base = Math.min(22 * Math.sqrt(quantidade), 64);
+  const t = Math.round(grande ? base + 10 : base);
   const cor = lerCor(corDoTom[tom]);
   const forma = origem === "cidadao" ? `<circle cx="12" cy="12" r="8.5"/>`
     : origem === "frota" ? `<rect x="4" y="4" width="16" height="16" rx="2"/>`
     : `<path d="M12 2.5 21.5 12 12 21.5 2.5 12Z"/>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}" viewBox="0 0 24 24"><g fill="${cor}" stroke="#fff" stroke-width="2.5">${forma}</g></svg>`;
+  const numero = quantidade > 1
+    ? `<text x="12" y="12.6" text-anchor="middle" dominant-baseline="middle" font-size="${quantidade > 9 ? 7 : 8.5}" font-weight="700" fill="#fff" font-family="inherit">${quantidade}</text>`
+    : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${t}" height="${t}" viewBox="0 0 24 24"><g fill="${cor}" stroke="#fff" stroke-width="${quantidade > 1 ? 1.6 : 2.5}">${forma}</g>${numero}</svg>`;
   return l.divIcon({ html: svg, className: "qr-ponto", iconSize: [t, t], iconAnchor: [t / 2, t / 2] });
 }
 
@@ -42,7 +61,8 @@ function iconePino(l: L) {
 
 // ---------- Componente ----------
 
-export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSelecionar, pino, centro, rotulo, altura = 420 }: {
+export function MapaOcorrencias({ pontos = [], trajetos = [], areas, selecionado, aoSelecionar, pino, centro, rotulo, altura = 420 }: {
+  areas?: AreasMapa;
   pontos?: PontoMapa[];
   trajetos?: TrajetoMapa[];
   selecionado?: string | null;
@@ -59,13 +79,15 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
   const lib = useRef<L | null>(null);
   const mapa = useRef<Leaflet.Map | null>(null);
   const camada = useRef<Leaflet.LayerGroup | null>(null);
+  const camadaAreas = useRef<Leaflet.GeoJSON | null>(null);
+  const ultimaVista = useRef<string | null>(null);
   const marcadores = useRef(new Map<string, Leaflet.Marker>());
   const marcadorPino = useRef<Leaflet.Marker | null>(null);
   const [estado, setEstado] = useState<"carregando" | "pronto" | "falhou">("carregando");
   const [semFundo, setSemFundo] = useState(false);
   const [tema, setTema] = useState(0);
-  const cb = useRef({ aoSelecionar, pino, centro });
-  useEffect(() => { cb.current = { aoSelecionar, pino, centro }; });
+  const cb = useRef({ aoSelecionar, pino, centro, areas });
+  useEffect(() => { cb.current = { aoSelecionar, pino, centro, areas }; });
 
   // Cria o mapa uma vez (o Leaflet só roda no navegador, por isso o import dinâmico).
   useEffect(() => {
@@ -95,7 +117,7 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
       vivo = false;
       obs.disconnect();
       mapa.current?.remove();
-      mapa.current = null; camada.current = null; marcadorPino.current = null; pontosNoMapa.clear();
+      mapa.current = null; camada.current = null; camadaAreas.current = null; marcadorPino.current = null; pontosNoMapa.clear();
     };
   }, []);
 
@@ -113,12 +135,13 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
     }
     for (const p of pontos) {
       todos.push([p.lat, p.lon]);
-      const mk = l.marker([p.lat, p.lon], { icon: icone(l, p.origem, p.tom, p.id === selecionado), title: p.titulo, alt: p.titulo, zIndexOffset: p.id === selecionado ? 1000 : 0 });
+      const mk = l.marker([p.lat, p.lon], { icon: icone(l, p.origem, p.tom, p.id === selecionado, p.quantidade), title: p.titulo, alt: p.titulo,
+        zIndexOffset: p.id === selecionado ? 1000 : (p.quantidade ?? 1) * 10 }); // bolas grandes por cima das pequenas
       mk.on("click", () => cb.current.aoSelecionar?.(p.id));
       mk.addTo(g);
       marcadores.current.set(p.id, mk);
     }
-    if (!pino && !cb.current.centro && todos.length) {
+    if (!pino && !cb.current.centro && !cb.current.areas && todos.length) {
       m.fitBounds(l.latLngBounds(todos), { padding: [40, 40], maxZoom: todos.length === 1 ? 16 : 17 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -130,8 +153,8 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
     if (estado !== "pronto" || !l) return;
     for (const p of pontos) {
       const mk = marcadores.current.get(p.id);
-      mk?.setIcon(icone(l, p.origem, p.tom, p.id === selecionado));
-      mk?.setZIndexOffset(p.id === selecionado ? 1000 : 0);
+      mk?.setIcon(icone(l, p.origem, p.tom, p.id === selecionado, p.quantidade));
+      mk?.setZIndexOffset(p.id === selecionado ? 1000 : (p.quantidade ?? 1) * 10);
     }
     const sel = pontos.find((p) => p.id === selecionado);
     if (sel) mapa.current?.panTo([sel.lat, sel.lon]);
@@ -153,6 +176,48 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
       if (!m.getBounds().contains(pos)) m.panTo(pos);
     }
   }, [estado, pino]);
+
+  // Áreas (distritos): pintadas pela faixa do valor; a escolhida ganha contorno forte e as outras somem.
+  // Ao escolher uma área, o mapa voa até ela; sem área escolhida, enquadra a cidade toda.
+  const areasGeo = areas?.geojson, areasValores = areas?.valores, areaSel = areas?.selecionada ?? null;
+  useEffect(() => {
+    const m = mapa.current, l = lib.current;
+    if (estado !== "pronto" || !m || !l) return;
+    camadaAreas.current?.remove();
+    camadaAreas.current = null;
+    const a = cb.current.areas;
+    if (!a || !areasGeo) return;
+    const destaque = lerCor("--qr-destaque");
+    const linha = lerCor("--qr-line-strong");
+    const tinta = lerCor("--qr-ink");
+    const g = l.geoJSON(areasGeo, {
+      style: (f) => {
+        const id = String(f?.properties?.id);
+        const sel = areaSel === id;
+        const apagada = !!areaSel && !sel;
+        return {
+          color: sel ? tinta : linha, weight: sel ? 3 : 0.8, opacity: apagada ? 0.35 : 0.9,
+          fillColor: destaque, fillOpacity: apagada ? 0.02 : OPACIDADE_FAIXA[faixaDe(a.valores[id] ?? 0, a.faixas)],
+        };
+      },
+      onEachFeature: (f, camadaF) => {
+        const id = String(f.properties?.id);
+        camadaF.bindTooltip(cb.current.areas?.rotuloDe(id) ?? id, { sticky: true, direction: "top", className: "qr-dica" });
+        camadaF.on("click", () => cb.current.areas?.aoEscolher?.(id));
+      },
+    }).addTo(m);
+    g.bringToBack();
+    camadaAreas.current = g;
+    // Só voa quando a área escolhida muda (atualizar os números ou trocar o tema não mexe na vista).
+    const chaveVista = areaSel ?? "";
+    if (ultimaVista.current !== chaveVista) {
+      ultimaVista.current = chaveVista;
+      const achadas: Leaflet.Polygon[] = [];
+      g.eachLayer((x) => { if ((x as Leaflet.Polygon & { feature?: import("geojson").Feature }).feature?.properties?.id === areaSel) achadas.push(x as Leaflet.Polygon); });
+      const limites = achadas[0] ? achadas[0].getBounds() : g.getBounds();
+      if (limites.isValid()) m.flyToBounds(limites, { padding: [24, 24], maxZoom: 15, duration: 0.6 });
+    }
+  }, [estado, areasGeo, areasValores, areaSel, tema]);
 
   // Pino fixo: quando o ponto muda por fora (busca de endereço, "minha localização"), o mapa vai até ele.
   const centroLat = centro?.lat, centroLon = centro?.lon;
@@ -203,21 +268,48 @@ function PinoFixo() {
   );
 }
 
-/** Legenda escrita do mapa (a forma e a cor sempre com palavra). */
-export function LegendaMapa({ comTrajeto = false }: { comTrajeto?: boolean }) {
+/** Legenda escrita do mapa (a forma e a cor sempre com palavra). `bolhas`: tamanhos de exemplo; `faixas`: tons dos bairros. */
+export function LegendaMapa({ comTrajeto = false, bolhas = false, faixas }: { comTrajeto?: boolean; bolhas?: boolean; faixas?: number[] }) {
   const forma = (d: string) => <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 fill-ink-muted stroke-surface-raised stroke-2">{d === "c" ? <circle cx="12" cy="12" r="8.5" /> : d === "q" ? <rect x="4" y="4" width="16" height="16" rx="2" /> : <path d="M12 2.5 21.5 12 12 21.5 2.5 12Z" />}</svg>;
   const cor = (c: string, t: string) => <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className={`size-3 rounded-full ${c}`} />{t}</span>;
+  const textoFaixa = (i: number) => !faixas ? "" : i === 0 ? `${faixas[0]}` : i < faixas.length ? `${faixas[i - 1] + 1}–${faixas[i]}` : `${faixas[faixas.length - 1] + 1} ou mais`;
   return (
-    <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs" aria-label="Legenda do mapa">
-      <span className="inline-flex items-center gap-1.5">{forma("c")}Cidadão</span>
-      <span className="inline-flex items-center gap-1.5">{forma("q")}Ônibus</span>
-      <span className="inline-flex items-center gap-1.5">{forma("l")}Cidadão + ônibus</span>
-      <span className="text-ink-muted">·</span>
-      {cor("bg-danger", "Prioridade alta (4–5)")}
-      {cor("bg-warn", "Média (3)")}
-      {cor("bg-ok", "Baixa (1–2)")}
-      {cor("bg-ink-muted", "Resolvida ou possivelmente resolvida")}
-      {comTrajeto && <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="h-1 w-5 rounded-full bg-chart-1" />Trajeto do ônibus</span>}
+    <div className="grid gap-2 text-xs" aria-label="Legenda do mapa">
+      <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+        <span className="inline-flex items-center gap-1.5">{forma("c")}Cidadão</span>
+        <span className="inline-flex items-center gap-1.5">{forma("q")}Ônibus</span>
+        <span className="inline-flex items-center gap-1.5">{forma("l")}Cidadão + ônibus</span>
+        <span className="text-ink-muted">·</span>
+        {cor("bg-danger", "Prioridade alta (4–5)")}
+        {cor("bg-warn", "Média (3)")}
+        {cor("bg-ok", "Baixa (1–2)")}
+        {cor("bg-ink-muted", "Resolvida ou possivelmente resolvida")}
+        {comTrajeto && <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="h-1 w-5 rounded-full bg-chart-1" />Trajeto do ônibus</span>}
+      </div>
+      {bolhas && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <span className="font-semibold">Tamanho = nº de reportes do mesmo problema:</span>
+          {[1, 3, 8].map((n) => (
+            <span key={n} className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true" className="inline-block rounded-full bg-ink-muted" style={{ width: Math.min(22 * Math.sqrt(n), 64) * 0.6, height: Math.min(22 * Math.sqrt(n), 64) * 0.6 }} />
+              {n} {n === 1 ? "reporte" : "reportes"}
+            </span>
+          ))}
+        </div>
+      )}
+      {faixas && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <span className="font-semibold">Bairros: problemas abertos</span>
+          {OPACIDADE_FAIXA.map((op, i) => (
+            <span key={op} className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true" className="relative inline-block size-4 overflow-hidden rounded-[4px] border border-line-strong">
+                <span className="absolute inset-0 bg-destaque" style={{ opacity: op }} />
+              </span>
+              {textoFaixa(i)}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -33,8 +33,27 @@ def saude() -> str:
     return "ok"
 
 
-def marcar_simuladas() -> None:
+def marcar_simuladas(exceto_ocorrencias: list[str] | None = None, exceto_passagens: list[str] | None = None) -> None:
     """Em memória tudo some ao reiniciar; não precisa marcar."""
+
+
+def apagar_simuladas() -> tuple[int, int]:
+    """Em memória tudo é simulado: apaga ocorrências e passagens."""
+    o, p = len(_ocorrencias), len(_passagens)
+    for x in (_ocorrencias, _historico, _passagens, _deteccoes):
+        x.clear()
+    return o, p
+
+
+_meta: dict[str, str] = {}
+
+
+def meta(chave: str) -> str | None:
+    return _meta.get(chave)
+
+
+def gravar_meta(chave: str, valor: str) -> None:
+    _meta[chave] = valor
 
 
 def limpar() -> None:

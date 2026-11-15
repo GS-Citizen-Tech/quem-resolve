@@ -34,6 +34,10 @@ VISAO_RESERVA_TIMEOUT = float(os.getenv("VISAO_RESERVA_TIMEOUT", "12"))  # total
 GEO_URL = os.getenv("GEO_URL", "https://nominatim.openstreetmap.org")
 GEO_USER_AGENT = os.getenv("GEO_USER_AGENT", "QuemResolve/1.1 (projeto academico FIAP; github.com/GS-Citizen-Tech/quem-resolve)")
 GEO_TIMEOUT = float(os.getenv("GEO_TIMEOUT", "5"))
+# Malha dos 96 distritos (v1.3). Vazio = app/data/distritos_sp.geojson, que a API baixa sozinha do IBGE
+# na primeira subida (DISTRITOS_BAIXAR=1). Depois disso não depende mais do IBGE.
+DISTRITOS_ARQUIVO = os.getenv("DISTRITOS_ARQUIVO", "")
+DISTRITOS_BAIXAR = os.getenv("DISTRITOS_BAIXAR", "1").lower() not in ("0", "false", "nao", "não", "off")
 
 CORS_ORIGINS = _lista("CORS_ORIGINS", "http://localhost:3000")
 LIMIAR_CONFIANCA = float(os.getenv("LIMIAR_CONFIANCA", "0.5"))  # abaixo disso: confiança baixa, pede confirmação

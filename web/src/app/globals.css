@@ -315,3 +315,8 @@
   &::after { animation-delay: 1.2s; }
   [data-theme="alto-contraste"] &::before, [data-theme="alto-contraste"] &::after { display: none; }
 }
+
+/* Dica do mapa (nome do bairro e números) nas cores do tema. */
+.qr-mapa .qr-dica { background: var(--qr-surface-solid); color: var(--qr-ink); border: 1px solid var(--qr-line-strong); border-radius: 9px;
+  box-shadow: var(--shadow-card); font: 600 13px/1.35 var(--font-sans); padding: 6px 10px; }
+.qr-mapa .qr-dica::before { display: none; }

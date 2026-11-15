@@ -38,6 +38,7 @@ class Ocorrencia(BaseModel):
     grupo_duplicata_id: str | None = None
     foto_url: str | None = None
     corrigida_pelo_gestor: bool = False
+    distrito: str | None = Field(default=None, description="v1.3: id do distrito (malha do IBGE), calculado pela coordenada")
 
 
 class HistoricoItem(BaseModel):

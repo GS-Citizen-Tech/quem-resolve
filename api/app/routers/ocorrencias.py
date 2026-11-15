@@ -30,7 +30,7 @@ def criar(dados: OcorrenciaCriar):
         o = ocorrencias.registrar(dados)
     except ValueError as e:
         raise HTTPException(422, str(e))
-    return _publica(o)
+    return _publica(ocorrencias.com_distrito(o))
 
 
 def _publica(o: Ocorrencia) -> Ocorrencia:
@@ -40,16 +40,16 @@ def _publica(o: Ocorrencia) -> Ocorrencia:
 
 @router.get("", response_model=list[Ocorrencia])
 def listar(categoria: str | None = None, responsavel: str | None = None, origem: str | None = None,
-           status: str | None = None, limite: int = 500, _: dict = Depends(exigir_gestor_ou_robo)):
+           status: str | None = None, distrito: str | None = None, limite: int = 500, _: dict = Depends(exigir_gestor_ou_robo)):
     """Console da gestão e RPA (o robô de e-mail busca status=pendente_envio). Exige login (v0.8).
     foto_url vem como link temporário do Storage privado (v0.9)."""
-    return armazenamento.com_links(ocorrencias.filtrar(categoria, responsavel, origem, status, limite=min(limite, 2000)))
+    return armazenamento.com_links(ocorrencias.filtrar(categoria, responsavel, origem, status, limite=min(limite, 2000), distrito=distrito))
 
 
 @router.get("/metricas", response_model=Metricas)
 def obter_metricas(categoria: str | None = None, responsavel: str | None = None, origem: str | None = None,
-                   _: dict = Depends(exigir_gestor)):
-    return metricas.calcular(ocorrencias.filtrar(categoria, responsavel, origem))
+                   distrito: str | None = None, _: dict = Depends(exigir_gestor)):
+    return metricas.calcular(ocorrencias.filtrar(categoria, responsavel, origem, distrito=distrito))
 
 
 @router.get("/{oid}", response_model=Ocorrencia)
@@ -58,7 +58,7 @@ def obter(oid: str):
     o = repositorio.ocorrencia(oid)
     if not o:
         raise HTTPException(404, "Ocorrência não encontrada.")
-    return _publica(o)
+    return _publica(ocorrencias.com_distrito(o))
 
 
 def _nome_de(quem: str) -> str:
