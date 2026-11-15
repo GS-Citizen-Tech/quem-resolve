@@ -1,8 +1,8 @@
 // Cliente HTTP da API FastAPI (camada providers/). O front nunca fala com o LLM: tudo passa por aqui.
 import type {
-  AnaliseReporte, AtualizarStatus, Categoria, EventoSom, FeedbackEntrada, FiltrosOcorrencia, HistoricoItem, Mensagem,
+  AnaliseReporte, AtualizarStatus, Categoria, Endereco, EventoSom, FeedbackEntrada, FiltrosOcorrencia, HistoricoItem, Mensagem,
   Metricas, Ocorrencia, OcorrenciaCriar, PassagemResumo, Processamento, ReporteEntrada, Responsavel, RespostaAssistente,
-  Qualidade, RespostaVoz, Saude, Sessao, VisaoResultado,
+  Qualidade, RespostaVoz, ResultadoBusca, Saude, Sessao, VisaoResultado,
 } from "./tipos";
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
@@ -121,6 +121,12 @@ export const api = {
   /** O vídeo exige login, então vem por fetch (com o token) e vira um blob: URL para o <video>. */
   videoProcessamento: (id: string) => req<Blob>(`/frota/processamentos/${encodeURIComponent(id)}/video`, {}, 60_000, "blob"),
   eventosSom: (limite = 5) => req<EventoSom[]>(`/iot/eventos?limite=${limite}`),
+
+  // O · endereço por extenso (v1.1): a API consulta o OpenStreetMap; o aparelho nunca fala direto com ele.
+  // Cache por ponto arredondado (~10 m): voltar à mesma tela não pergunta de novo.
+  endereco: (lat: number, lon: number) =>
+    comCache(`end:${lat.toFixed(4)},${lon.toFixed(4)}`, () => req<Endereco>(`/geo/endereco${qs({ lat: lat.toFixed(6), lon: lon.toFixed(6) })}`, {}, 8_000)),
+  buscarEndereco: (q: string) => req<ResultadoBusca[]>(`/geo/buscar${qs({ q })}`, {}, 8_000),
 
   // L · feedback · M · login
   feedback: (f: FeedbackEntrada) => req<{ id: string }>("/feedback", json(f)),

@@ -8,8 +8,9 @@ export type Escolha = "ia" | "cidadao";
 export interface Rascunho {
   etapa: Etapa;
   descricao: string;
-  referencia: string;
   local: Localizacao | null;
+  /** Endereço por extenso do ponto (v1.1), ex.: "Rua Augusta, 900 · Consolação". null = só as coordenadas. */
+  endereco: string | null;
   analise: AnaliseReporte | null;
   manual: "falha" | "nao_emergencia" | null; // escolha manual: API fora do ar ou "não é uma emergência"
   deteccoes: Deteccao[];
@@ -20,7 +21,7 @@ export interface Rascunho {
 }
 
 export const RASCUNHO_VAZIO: Rascunho = {
-  etapa: "captura", descricao: "", referencia: "", local: null, analise: null, manual: null, deteccoes: [],
+  etapa: "captura", descricao: "", local: null, endereco: null, analise: null, manual: null, deteccoes: [],
   avisoFoto: null, categoriaId: null, escolha: "ia", ocorrencia: null,
 };
 
@@ -29,9 +30,16 @@ const CHAVE = "quem-resolve:rascunho";
 export function lerRascunho(): Rascunho | null {
   try {
     const s = sessionStorage.getItem(CHAVE);
-    return s ? { ...RASCUNHO_VAZIO, ...JSON.parse(s) } : null;
+    if (!s) return null;
+    const { referencia: _antigo, ...salvo } = JSON.parse(s); // rascunho de antes da v1.1 (campo de referência saiu)
+    return { ...RASCUNHO_VAZIO, ...salvo };
   } catch { return null; }
 }
+
+// Foto tirada na tela inicial: passa para o Reportar em memória (nunca vai para o armazenamento do aparelho).
+let fotoPendente: File | null = null;
+export function guardarFotoPendente(f: File) { fotoPendente = f; }
+export function tirarFotoPendente(): File | null { const f = fotoPendente; fotoPendente = null; return f; }
 
 export function salvarRascunho(r: Rascunho) {
   try {

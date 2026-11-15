@@ -11,9 +11,7 @@ export function Confirmacao({ r, categoria, responsavel, temFoto, enviando, erro
   r: Rascunho; categoria: Categoria; responsavel: Responsavel | null; temFoto: boolean;
   enviando: boolean; erro: string | null; aoConfirmar: () => void;
 }) {
-  const local = r.local
-    ? `Sua localização${r.referencia ? ` · ${r.referencia}` : ""}`
-    : `${r.referencia || "Não informado"} (sem localização do aparelho)`;
+  const local = r.endereco ?? (r.local ? "Ponto marcado no mapa" : "Não informado");
   return (
     <div className="grid gap-5">
       <div className="grid gap-1">

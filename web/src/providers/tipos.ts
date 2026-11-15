@@ -1,4 +1,4 @@
-// Espelho dos contratos da API (docs/CONTRATOS.md v0.8 e api/app/schemas). Mudou lá, muda aqui.
+// Espelho dos contratos da API (docs/CONTRATOS.md v1.1 e api/app/schemas). Mudou lá, muda aqui.
 
 export type Emergencia = "sim" | "nao" | "depende";
 export type Origem = "cidadao" | "frota" | "ambos";
@@ -126,3 +126,7 @@ export interface Qualidade {
 /** Faixas do selo de confiança (design system): alta ≥ 0,8 · média 0,5–0,79 · baixa < 0,5. */
 export type NivelConfianca = "alta" | "media" | "baixa";
 export const nivelConfianca = (c: number): NivelConfianca => (c >= 0.8 ? "alta" : c >= 0.5 ? "media" : "baixa");
+
+// O · Endereço por extenso (v1.1)
+export interface Endereco { texto_curto: string; bairro: string | null; cidade: string | null; rua: string | null; numero: string | null; fonte: string }
+export interface ResultadoBusca { texto_curto: string; bairro: string | null; cidade: string | null; lat: number; lon: number }

@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **1.0** · 13/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **1.2** · 15/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -44,6 +44,7 @@ Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é
 | L | Feedback do cidadão | `POST /feedback` | Front End (HITL) | Ian | Front, qualidade da IA |
 | M | Login do gestor | `POST /auth/login` | Front End (perfis) | Ian | Console da gestão |
 | N | Qualidade da IA | `GET /qualidade` | Front End + Governança | Ian | Console (tela Qualidade) |
+| O | Endereço (v1.1) | `GET /geo/endereco`, `GET /geo/buscar` | Front End (múltiplas fontes de dados) | Ian | Front (tela inicial e Reportar) |
 
 > **Computação Quântica** não tem endpoint: é roadmap sem código. Os dados de `GET /ocorrencias` e `GET /frota/passagens` servem de exemplo real do gargalo (quais ônibus equipar, como priorizar a fila).
 
@@ -222,6 +223,8 @@ Saída estruturada do LLM (uso interno da API, validada com Pydantic):
 ```json
 { "categoria_id": "fio_telecom", "confianca": 0.74, "explicacao": "Cabo pendurado sem faísca costuma ser de telecom." }
 ```
+
+**LLM real (v1.2):** com `LLM_PROVIDER=gemini` a API manda **todo** relato ao Google Gemini (`app/providers/llm.py`, `GeminiLLM`), com instrução de sistema, a lista de categorias e `responseJsonSchema` (categoria presa aos ids da base + `"nenhum"`). A resposta é validada em `AnaliseLLM` (Pydantic): `categoria_id`, `confianca` 0–1, `explicacao` curta. Vence a maior confiança entre visão, regras e LLM; quando o LLM concorda, `classificado_por = "llm"` e a `explicacao` usa a frase dele. Falha, sem cota ou JSON fora do formato: segue com regras e visão (nunca derruba a análise). Com `mock`, o LLM só entra quando regras e visão não bastam. O formato de saída não mudou.
 
 ---
 
@@ -536,6 +539,29 @@ Saída:
 
 ---
 
+## O. Endereço por extenso (v1.1)
+
+Mostra ao cidadão **onde** o reporte vai ficar ("Você está em Rua Augusta, 900") e permite procurar um endereço quando a localização do aparelho foi negada. Fonte: **OpenStreetMap / Nominatim** (grátis, sem chave). A chamada passa pela API, nunca direto do aparelho: a API manda o User-Agent do projeto, guarda em cache (coordenadas arredondadas em ~10 m) e respeita o limite de 1 pedido por segundo. Provider: `GEO_PROVIDER=mock|nominatim`.
+
+`GET /geo/endereco?lat=-23.5558&lon=-46.6623` → `200`
+
+```json
+{ "texto_curto": "Rua Augusta, 900", "bairro": "Consolação", "cidade": "São Paulo",
+  "rua": "Rua Augusta", "numero": "900", "fonte": "OpenStreetMap" }
+```
+
+`GET /geo/buscar?q=rua augusta 900` → `200` · até 5 resultados, só na Grande SP. `q` com 3 a 120 caracteres.
+
+```json
+[ { "texto_curto": "Rua Augusta, 900", "bairro": "Consolação", "cidade": "São Paulo", "lat": -23.5558, "lon": -46.6623 } ]
+```
+
+Erros: `422` = coordenada fora da Grande SP ou busca curta demais · `503` = OpenStreetMap fora do ar ou lento (o front mostra as coordenadas e o reporte segue) · `404` em `/geo/endereco` = sem endereço para o ponto.
+
+O endereço escolhido vai junto no reporte no fim da `descricao` (`"… (Local: Rua Augusta, 900, Consolação)"`), como já acontecia com o antigo campo "Rua ou ponto de referência", que saiu do app. `POST /ocorrencias` não muda.
+
+---
+
 ## Para o parceiro decidir na revisão
 
 1. **RAG (G):** o formato de `fontes` atende? Precisa de mais algum campo (ex.: `score` de similaridade para a avaliação por componente)?
@@ -560,3 +586,5 @@ Saída:
 | 0.8 | 12/11/2026 | Ian | Console (F3): `GET /ocorrencias` e `/metricas` exigem login (robô usa a chave); gestor só altera o próprio órgão (`403`); `GET /qualidade` (N); frota marca `possivelmente_resolvida` (25 m) e a simulação cria 3 passagens. O robô de RPA continua igual |
 | 1.0 | 13/11/2026 | Ian | Frota (I.2): o console processa vídeo curto ou fotos em segundo plano (`POST/GET /frota/processamentos`, vídeo anotado em WebM), com o mesmo núcleo do script do ônibus. `POST /frota/passagens` não muda |
 | 0.9 | 12/11/2026 | Ian | Banco (B1–B3): `foto_base64` no `POST /ocorrencias` (borrada e guardada no Storage privado), `foto_url` só para o gestor (link temporário), `GET /ocorrencias/{id}/historico`, `observacao` do `PATCH` vai para o histórico, `/feedback` devolve um `id` próprio, `503` com o banco fora, `banco`/`fotos` no `/health` e em `/qualidade`. Robô de RPA: mesma API, mais as visões SQL opcionais |
+| 1.1 | 15/11/2026 | Ian | Endereço (O): `GET /geo/endereco` e `GET /geo/buscar` com OpenStreetMap/Nominatim pela API. O campo "Rua ou ponto de referência" sai do app; o endereço do mapa vai no fim da descrição |
+| 1.2 | 15/11/2026 | Ian | Análise (D): LLM real com o Gemini (`LLM_PROVIDER=gemini`), JSON preso a esquema e validado em `AnaliseLLM`; lê todo relato e a explicação usa a frase dele. Formato da resposta não muda |

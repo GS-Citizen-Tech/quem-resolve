@@ -36,8 +36,10 @@ export async function prepararFoto(arquivo: File): Promise<File> {
   return new File([blob], "foto.jpg", { type: "image/jpeg" });
 }
 
-export function FotoEntrada({ previa, ocupado, erro, aoEscolher, aoRemover }: {
+export function FotoEntrada({ previa, ocupado, erro, aoEscolher, aoRemover, comTitulo = true }: {
   previa: string | null; ocupado?: boolean; erro?: string | null;
+  /** false quando o título já está no cartão em volta (Reportar v1.1). */
+  comTitulo?: boolean;
   aoEscolher: (arquivo: File) => void; aoRemover: () => void;
 }) {
   const camera = useRef<HTMLInputElement>(null);
@@ -49,7 +51,7 @@ export function FotoEntrada({ previa, ocupado, erro, aoEscolher, aoRemover }: {
   };
   return (
     <div className="grid gap-2" aria-describedby={erro ? "foto-erro" : undefined}>
-      <p className="text-[17px] font-semibold">Foto <span className="font-normal text-ink-muted">(opcional, ajuda a identificar)</span></p>
+      {comTitulo && <p className="text-[17px] font-semibold">Foto <span className="font-normal text-ink-muted">(opcional, ajuda a identificar)</span></p>}
       <input ref={camera} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={escolher} />
       <input ref={galeria} type="file" accept="image/jpeg,image/png,image/webp,image/*" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={escolher} />
       {previa ? (

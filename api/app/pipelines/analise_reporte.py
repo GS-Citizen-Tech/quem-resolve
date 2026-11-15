@@ -45,13 +45,18 @@ def analisar(entrada: ReporteEntrada) -> AnaliseReporte:
         cid, p = regras[0]
         candidatos.append((cid, min(0.6 + 0.15 * p, 0.95), "regras"))
 
-    if not candidatos or max(c[1] for c in candidatos) < config.LIMIAR_CONFIANCA:
+    # O LLM lê todo relato (entende frases que as palavras-chave não pegam, ex.: "o poste da minha rua está apagado").
+    # Saída estruturada (AnaliseLLM); se falhar, seguem regras e visão (RNF06).
+    # O mock só entra quando regras e visão não bastam (ele usa as mesmas palavras-chave: não conta como 2ª opinião).
+    llm = None
+    real = config.LLM_PROVIDER != "mock"
+    if real or not candidatos or max(c[1] for c in candidatos) < config.LIMIAR_CONFIANCA:
         try:
-            r = obter_llm().classificar(entrada.descricao, list(base.categorias()))
-            if r.categoria_id in base.categorias():
-                candidatos.append((r.categoria_id, r.confianca, "llm"))
+            llm = obter_llm().classificar(entrada.descricao, list(base.categorias()))
+            if llm.categoria_id in base.categorias():
+                candidatos.append((llm.categoria_id, llm.confianca, "llm"))
         except ErroLLM:
-            pass  # RNF06: sem IA, o cidadão escolhe a categoria manualmente
+            pass  # sem IA, o cidadão escolhe a categoria manualmente se as regras também não acharem
 
     if not candidatos:
         return AnaliseReporte(
@@ -62,10 +67,13 @@ def analisar(entrada: ReporteEntrada) -> AnaliseReporte:
             alternativas=list(base.categorias().values())[:6],
         )
 
-    # Se visão e texto concordam, a confiança sobe.
+    # Vence a maior confiança. Se outra fonte concorda com ela (visão, regras ou LLM), a confiança sobe.
     cid, conf, origem = max(candidatos, key=lambda c: c[1])
-    if len({c[0] for c in candidatos}) == 1 and len(candidatos) > 1:
+    concordam = [c for c in candidatos if c[0] == cid]
+    if len(concordam) > 1:
         conf = min(conf + 0.1, 0.99)
+    if any(c[2] == "llm" for c in concordam):
+        origem = "llm" if origem == "regras" else origem  # a foto continua sendo a origem quando ela decidiu
 
     cat, resp = base.categoria(cid), base.responsavel_de(cid)
     alternativas = [base.categoria(c) for c, _ in regras if c != cid][:3]
@@ -75,9 +83,16 @@ def analisar(entrada: ReporteEntrada) -> AnaliseReporte:
         responsavel=resp,
         confianca=round(conf, 2),
         precisa_confirmar=conf < config.LIMIAR_CONFIANCA,
-        explicacao=f"Isso parece ser {cat.nome.lower()}. Quem resolve: {resp.nome}.",
+        explicacao=_explicacao(llm, cid, cat.nome, resp.nome),
         proximo_passo=f"Confirme e nós geramos a solicitação para {resp.canal}.",
         classificado_por=origem,
         alternativas=alternativas,
         fontes=[Fonte(titulo="Base Quem Resolve v0 (a validar)", url=resp.url)],
     )
+
+
+def _explicacao(llm, cid: str, nome: str, quem: str) -> str:
+    """Usa a frase do LLM (linguagem simples) quando ele concorda com a categoria escolhida."""
+    if llm is not None and llm.categoria_id == cid and llm.explicacao.strip() and config.LLM_PROVIDER != "mock":
+        return f"{llm.explicacao.strip()} Quem resolve: {quem}."
+    return f"Isso parece ser {nome.lower()}. Quem resolve: {quem}."

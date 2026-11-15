@@ -1,7 +1,7 @@
 # Casos de teste da IA (começo da tabela do README)
 
 > Rodado em 10/11/2026 com a API local: `VISAO_PROVIDER=yolo` (YOLOv8n RDD2022 r2) e `LLM_PROVIDER=mock`.
-> Quando o LLM real do parceiro entrar, rodar de novo e completar a coluna "obtido".
+> 15/11: o LLM real (Gemini, `LLM_PROVIDER=gemini`) entrou na API. Rodar de novo os casos 1–5 com ele e completar a coluna "obtido". No caso 5 ("poste apagado") o esperado é o Gemini acertar **Iluminação pública** (é o "ajuste realizado" da tabela).
 
 | # | Entrada real | Saída esperada | Saída obtida | Resultado |
 |---|---|---|---|---|

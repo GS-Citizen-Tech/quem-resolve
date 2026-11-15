@@ -304,3 +304,14 @@
 [data-theme="alto-contraste"] .qr-mapa .leaflet-tile-pane { filter: grayscale(1) contrast(1.2); }
 .qr-mapa .leaflet-control-attribution { font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { .qr-mapa .leaflet-zoom-anim .leaflet-zoom-animated { transition: none !important; } }
+
+/* Bola de falar (tela inicial e Reportar): anel que pulsa. Some com prefers-reduced-motion (regra global acima). */
+@keyframes qr-pulso { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(1.45); opacity: 0; } }
+@utility pulso {
+  &::before, &::after {
+    content: ""; position: absolute; inset: 0; border-radius: 999px; background: var(--qr-destaque);
+    animation: qr-pulso 2.4s var(--ease-entrada) infinite; pointer-events: none; z-index: -1;
+  }
+  &::after { animation-delay: 1.2s; }
+  [data-theme="alto-contraste"] &::before, [data-theme="alto-contraste"] &::after { display: none; }
+}

@@ -16,7 +16,7 @@ import { Emergencia } from "./Emergencia";
 import { Protocolo } from "./Protocolo";
 import { Resultado } from "./Resultado";
 import {
-  apagarRascunho, etapaDaUrl, etapaValida, lerRascunho, RASCUNHO_VAZIO, salvarRascunho, type Etapa, type Rascunho,
+  apagarRascunho, etapaDaUrl, etapaValida, lerRascunho, RASCUNHO_VAZIO, salvarRascunho, tirarFotoPendente, type Etapa, type Rascunho,
 } from "./rascunho";
 
 const urlDa = (e: Etapa) => (e === "captura" || e === "analisando" ? "/reportar" : `/reportar?etapa=${e}`);
@@ -24,7 +24,8 @@ const urlDa = (e: Etapa) => (e === "captura" || e === "analisando" ? "/reportar"
 export function FluxoReportar() {
   const { despachar } = useAppState();
   const [r, setR] = useReducer((x: Rascunho, f: Rascunho | ((x: Rascunho) => Rascunho)) => (typeof f === "function" ? f(x) : f), RASCUNHO_VAZIO);
-  const [{ pronto, vozAuto }, iniciou] = useReducer((_: { pronto: boolean; vozAuto: boolean }, n: { pronto: boolean; vozAuto: boolean }) => n, { pronto: false, vozAuto: false });
+  type Inicio = "voz" | "escrever" | null;
+  const [{ pronto, inicio }, iniciou] = useReducer((_: { pronto: boolean; inicio: Inicio }, n: { pronto: boolean; inicio: Inicio }) => n, { pronto: false, inicio: null });
   const [base, setBase] = useState<BaseQuemResolve>(BASE_RESERVA);
   const [foto, setFoto] = useState<{ arquivo: File; url: string } | null>(null);
   const [preparandoFoto, setPreparandoFoto] = useState(false);
@@ -40,15 +41,22 @@ export function FluxoReportar() {
   useEffect(() => {
     const salvo = lerRascunho() ?? RASCUNHO_VAZIO;
     const pedida = etapaDaUrl();
-    const voz = new URLSearchParams(window.location.search).get("voz") === "1";
-    const etapa = etapaValida(pedida, salvo) ? pedida : etapaValida(salvo.etapa, salvo) ? salvo.etapa : "captura";
-    setR({ ...salvo, etapa });
+    // Vindo da tela inicial (v1.1): ?voz=1 (bola), ?escrever=1, ?texto=… (exemplos) ou foto já tirada.
+    const p = new URLSearchParams(window.location.search);
+    const exemplo = (p.get("texto") ?? "").slice(0, 200);
+    const fotoInicio = tirarFotoPendente();
+    const novo = p.has("voz") || p.has("escrever") || !!exemplo || !!fotoInicio;
+    const etapa = novo ? "captura" : etapaValida(pedida, salvo) ? pedida : etapaValida(salvo.etapa, salvo) ? salvo.etapa : "captura";
+    const base = novo && salvo.ocorrencia ? RASCUNHO_VAZIO : salvo; // depois de um protocolo, começa do zero
+    setR({ ...base, etapa, descricao: exemplo && !base.descricao.trim() ? `${exemplo} ` : base.descricao });
     window.history.replaceState(null, "", urlDa(etapa));
-    iniciou({ pronto: true, vozAuto: voz });
+    iniciou({ pronto: true, inicio: p.get("voz") === "1" ? "voz" : p.has("escrever") || exemplo ? "escrever" : null });
+    if (fotoInicio) trocarFoto(fotoInicio);
     carregarBase().then(setBase);
   }, []);
 
   useEffect(() => { if (pronto) salvarRascunho(r); }, [r, pronto]);
+  const mudar = useCallback((p: Partial<Pick<Rascunho, "descricao" | "local" | "endereco">>) => setR((x) => ({ ...x, ...p })), []);
 
   // Botão voltar/avançar do navegador.
   useEffect(() => {
@@ -123,10 +131,10 @@ export function FluxoReportar() {
     if (enviando || !r.categoriaId) return;
     setEnviando(true);
     setErroEnvio(null);
-    const referencia = r.referencia.trim();
+    const endereco = r.endereco?.trim();
     try {
       const o = await api.criarOcorrencia({
-        descricao: referencia ? `${r.descricao.trim()} (Local: ${referencia})`.slice(0, 1000) : r.descricao.trim(),
+        descricao: endereco ? `${r.descricao.trim()} (Local: ${endereco.replace(" · ", ", ")})`.slice(0, 1000) : r.descricao.trim(),
         localizacao: r.local ?? CENTRO_SP,
         categoria_sugerida: r.analise?.categoria?.id ?? null,
         confianca: r.analise?.confianca ?? 0,
@@ -158,9 +166,9 @@ export function FluxoReportar() {
       <p ref={titulo} tabIndex={-1} className="sr-only">Reportar problema, etapa: {NOMES_ETAPA[r.etapa]}</p>
       {!pronto ? <Carregando texto="Abrindo…" /> : <>
         {r.etapa === "captura" && (
-          <Captura descricao={r.descricao} referencia={r.referencia} local={r.local}
-            previa={foto?.url ?? null} preparandoFoto={preparandoFoto} erroFoto={erroFoto} vozAuto={vozAuto}
-            aoMudar={(p) => setR((x) => ({ ...x, ...p }))} aoFoto={trocarFoto} aoRemoverFoto={removerFoto} aoContinuar={analisar} />
+          <Captura descricao={r.descricao} local={r.local} endereco={r.endereco}
+            previa={foto?.url ?? null} preparandoFoto={preparandoFoto} erroFoto={erroFoto} inicio={inicio}
+            aoMudar={mudar} aoFoto={trocarFoto} aoRemoverFoto={removerFoto} aoContinuar={analisar} />
         )}
         {r.etapa === "analisando" && (
           <div className="grid gap-2">

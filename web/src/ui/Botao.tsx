@@ -3,7 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Phone } from "lucide-react";
 import Link from "next/link";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 
 type Variante = "primario" | "secundario" | "link";
 type Tamanho = "cidadao" | "console";
@@ -25,6 +25,7 @@ export interface BotaoProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tamanho?: Tamanho;
   icone?: LucideIcon;
   bloco?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 export function Botao({ variante = "primario", tamanho = "cidadao", icone: Icone, bloco, className = "", children, type = "button", ...p }: BotaoProps) {

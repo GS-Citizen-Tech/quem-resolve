@@ -5,6 +5,7 @@ os.environ["SEED_OCORRENCIAS"] = "0"  # testes começam com o banco vazio
 # (use um banco só de teste: limpar() apaga as ocorrências).
 os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "")
 os.environ["SUPABASE_URL"] = ""  # fotos sempre na memória nos testes (o Supabase Storage é simulado em test_fotos.py)
+os.environ["GEO_PROVIDER"] = "mock"  # endereço sem internet nos testes (o Nominatim é simulado em test_geo.py)
 
 import pytest
 from fastapi.testclient import TestClient

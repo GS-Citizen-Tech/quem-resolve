@@ -11,13 +11,16 @@ def _lista(nome: str, padrao: str) -> list[str]:
 
 
 # Qual implementação usar em cada módulo: "mock" até o módulo real ficar pronto.
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "mock")          # mock | gemini | groq
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "mock")          # mock | gemini
 VISAO_PROVIDER = os.getenv("VISAO_PROVIDER", "mock")      # mock | yolo
 RAG_PROVIDER = os.getenv("RAG_PROVIDER", "mock")          # mock | real
 VOZ_PROVIDER = os.getenv("VOZ_PROVIDER", "mock")          # mock | real
+GEO_PROVIDER = os.getenv("GEO_PROVIDER", "nominatim")     # mock | nominatim (endereço por extenso, v1.1)
 
-LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "") or os.getenv("VISAO_RESERVA_CHAVE", "")  # uma chave do Gemini serve para os dois
+# Lista: se um modelo estiver sem cota (429), sobrecarregado ou lento, tenta o próximo.
+LLM_MODEL = os.getenv("LLM_MODEL", "") or "gemini-3.5-flash-lite,gemini-3.5-flash"
+LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "10"))  # total, somando os modelos da lista
 YOLO_MODELO = os.getenv("YOLO_MODELO", "modelos/rdd2022-n-r2.onnx")  # o .json com classes e limiares fica ao lado
 YOLO_LIMIAR = float(os.environ["YOLO_LIMIAR"]) if os.getenv("YOLO_LIMIAR") else None  # vazio = limiar do cidadão escolhido no treino
 
@@ -26,6 +29,11 @@ VISAO_RESERVA = os.getenv("VISAO_RESERVA", "off")                    # off | moc
 VISAO_RESERVA_MODELO = os.getenv("VISAO_RESERVA_MODELO", "gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.8-flash")  # lista: tenta o próximo se um estiver sobrecarregado, lento ou sem cota. O lite vem 1º: no teste de 12/11 respondeu em 1,4 s, o flash travou e o 3.8 estava sobrecarregado
 VISAO_RESERVA_CHAVE = os.getenv("VISAO_RESERVA_CHAVE", "") or os.getenv("LLM_API_KEY", "")  # vazio = usa a chave do LLM
 VISAO_RESERVA_TIMEOUT = float(os.getenv("VISAO_RESERVA_TIMEOUT", "12"))  # total, somando os modelos da lista
+
+# Endereço por extenso (v1.1): OpenStreetMap / Nominatim, grátis e sem chave. O User-Agent identifica o projeto (regra do Nominatim).
+GEO_URL = os.getenv("GEO_URL", "https://nominatim.openstreetmap.org")
+GEO_USER_AGENT = os.getenv("GEO_USER_AGENT", "QuemResolve/1.1 (projeto academico FIAP; github.com/GS-Citizen-Tech/quem-resolve)")
+GEO_TIMEOUT = float(os.getenv("GEO_TIMEOUT", "5"))
 
 CORS_ORIGINS = _lista("CORS_ORIGINS", "http://localhost:3000")
 LIMIAR_CONFIANCA = float(os.getenv("LIMIAR_CONFIANCA", "0.5"))  # abaixo disso: confiança baixa, pede confirmação

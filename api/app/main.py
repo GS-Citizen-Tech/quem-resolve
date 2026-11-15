@@ -10,7 +10,7 @@ from sqlalchemy.exc import DBAPIError
 from app import config
 from app.pipelines import simulacao
 from app.providers import armazenamento, repositorio
-from app.routers import assistente, base, cidadao, conta, integracoes, ocorrencias
+from app.routers import assistente, base, cidadao, conta, geo, integracoes, ocorrencias
 
 log = logging.getLogger("quem-resolve")
 
@@ -43,5 +43,5 @@ async def banco_fora(_: Request, erro: DBAPIError):
     return JSONResponse(status_code=503, content={"detail": "Banco de dados indisponível agora. Tente de novo em instantes."})
 
 
-for r in (base.router, cidadao.router, ocorrencias.router, assistente.router, integracoes.router, conta.router):
+for r in (base.router, cidadao.router, ocorrencias.router, assistente.router, integracoes.router, conta.router, geo.router):
     app.include_router(r)

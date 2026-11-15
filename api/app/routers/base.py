@@ -13,7 +13,7 @@ def health() -> dict:
     """Status e qual implementação (mock ou real) cada módulo está usando."""
     return {"status": "ok", "modulos": {
         "llm": config.LLM_PROVIDER, "visao": config.VISAO_PROVIDER,
-        "rag": config.RAG_PROVIDER, "voz": config.VOZ_PROVIDER, "banco": repositorio.nome(),
+        "rag": config.RAG_PROVIDER, "voz": config.VOZ_PROVIDER, "geo": config.GEO_PROVIDER, "banco": repositorio.nome(),
         "fotos": armazenamento.atual.nome,
     }, "banco": repositorio.saude()}
 

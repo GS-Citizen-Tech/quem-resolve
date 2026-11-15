@@ -1,6 +1,6 @@
 "use client";
 // Mapa com Leaflet + OpenStreetMap (grátis, sem chave e sem cartão). Reaproveitado no console (Mapa e Frota) e no
-// "Ajustar no mapa" do cidadão.
+// mapa em tela cheia do Reportar (modo `centro`: o pino fica parado no meio e a pessoa arrasta o mapa).
 // - Pontos: a forma mostra quem achou (círculo = cidadão, quadrado = ônibus, losango = os dois) e a cor a prioridade.
 //   A legenda escrita fica fora do mapa (cor nunca sozinha).
 // - Sem internet para o mapa de fundo: os pontos e trajetos continuam no mapa e a lista da tela segue visível.
@@ -42,15 +42,18 @@ function iconePino(l: L) {
 
 // ---------- Componente ----------
 
-export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSelecionar, pino, rotulo, altura = 420 }: {
+export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSelecionar, pino, centro, rotulo, altura = 420 }: {
   pontos?: PontoMapa[];
   trajetos?: TrajetoMapa[];
   selecionado?: string | null;
   aoSelecionar?: (id: string) => void;
   /** Modo "Ajustar no mapa": um pino que dá para arrastar (ou tocar no mapa para mover). */
   pino?: { lat: number; lon: number; aoMover: (lat: number, lon: number) => void };
+  /** Modo "pino fixo no centro" (v1.1): o pino é desenhado por cima, parado; arrastar o mapa muda o ponto. */
+  centro?: { lat: number; lon: number; aoMover: (lat: number, lon: number) => void };
   rotulo: string;
-  altura?: number;
+  /** Número em px, ou "100%" para ocupar a altura do pai (tela cheia). */
+  altura?: number | "100%";
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const lib = useRef<L | null>(null);
@@ -61,8 +64,8 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
   const [estado, setEstado] = useState<"carregando" | "pronto" | "falhou">("carregando");
   const [semFundo, setSemFundo] = useState(false);
   const [tema, setTema] = useState(0);
-  const cb = useRef({ aoSelecionar, pino });
-  useEffect(() => { cb.current = { aoSelecionar, pino }; });
+  const cb = useRef({ aoSelecionar, pino, centro });
+  useEffect(() => { cb.current = { aoSelecionar, pino, centro }; });
 
   // Cria o mapa uma vez (o Leaflet só roda no navegador, por isso o import dinâmico).
   useEffect(() => {
@@ -72,12 +75,17 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
       if (!vivo || !ref.current) return;
       const l = ((mod as unknown as { default?: L }).default ?? mod) as L;
       lib.current = l;
-      const m = l.map(ref.current, { center: CENTRO_SP, zoom: 12, zoomControl: true, attributionControl: true });
+      const inicio = cb.current.centro;
+      const m = l.map(ref.current, { center: inicio ? [inicio.lat, inicio.lon] : CENTRO_SP, zoom: inicio ? 17 : 12, zoomControl: true, attributionControl: true });
       l.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).on("tileerror", () => vivo && setSemFundo(true)).on("tileload", () => vivo && setSemFundo(false)).addTo(m);
       camada.current = l.layerGroup().addTo(m);
-      m.on("click", (e: Leaflet.LeafletMouseEvent) => cb.current.pino?.aoMover(e.latlng.lat, e.latlng.lng));
+      m.on("click", (e: Leaflet.LeafletMouseEvent) => {
+        if (cb.current.centro) m.panTo(e.latlng); // tocar num ponto leva o pino até lá
+        else cb.current.pino?.aoMover(e.latlng.lat, e.latlng.lng);
+      });
+      m.on("moveend", () => { const c = m.getCenter(); cb.current.centro?.aoMover(c.lat, c.lng); });
       mapa.current = m;
       setEstado("pronto");
     }).catch(() => vivo && setEstado("falhou"));
@@ -110,7 +118,7 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
       mk.addTo(g);
       marcadores.current.set(p.id, mk);
     }
-    if (!pino && todos.length) {
+    if (!pino && !cb.current.centro && todos.length) {
       m.fitBounds(l.latLngBounds(todos), { padding: [40, 40], maxZoom: todos.length === 1 ? 16 : 17 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,6 +154,15 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
     }
   }, [estado, pino]);
 
+  // Pino fixo: quando o ponto muda por fora (busca de endereço, "minha localização"), o mapa vai até ele.
+  const centroLat = centro?.lat, centroLon = centro?.lon;
+  useEffect(() => {
+    const m = mapa.current;
+    if (estado !== "pronto" || !m || centroLat === undefined || centroLon === undefined) return;
+    const c = m.getCenter();
+    if (Math.abs(c.lat - centroLat) > 1e-5 || Math.abs(c.lng - centroLon) > 1e-5) m.setView([centroLat, centroLon], Math.max(m.getZoom(), 17));
+  }, [estado, centroLat, centroLon]);
+
   if (estado === "falhou") {
     return (
       <div role="status" className="flex items-start gap-3 rounded-card border-2 border-dashed border-line-strong bg-surface-raised px-4 py-4 text-sm">
@@ -153,22 +170,36 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], selecionado, aoSel
         <div className="grid gap-0.5">
           <strong className="font-semibold">Mapa indisponível agora</strong>
           <span className="text-ink-muted">
-            Não deu para carregar o mapa.{pino ? " Você pode continuar com a localização do aparelho." : " A lista abaixo mostra as mesmas ocorrências."}
+            Não deu para carregar o mapa.{pino || centro ? " Procure o endereço pelo nome ou use a localização do aparelho." : " A lista abaixo mostra as mesmas ocorrências."}
           </span>
         </div>
       </div>
     );
   }
   return (
-    <div className="grid gap-1.5">
-      <div className="relative overflow-hidden rounded-card bg-surface-raised" style={{ height: altura }}>
+    <div className={`grid gap-1.5 ${altura === "100%" ? "h-full grid-rows-[1fr_auto]" : ""}`}>
+      <div className="relative overflow-hidden rounded-card bg-surface-raised" style={altura === "100%" ? undefined : { height: altura }}>
         <div ref={ref} role="region" aria-label={rotulo} className="qr-mapa size-full" />
+        {centro && estado === "pronto" && <PinoFixo />}
         {estado === "carregando" && <p role="status" className="absolute inset-0 z-[500] grid place-items-center text-sm text-ink-muted">Carregando o mapa…</p>}
       </div>
       {semFundo && (
-        <p role="status" className="text-xs text-ink-muted">O mapa de fundo não carregou (sem internet?). Os pontos continuam aqui e na lista.</p>
+        <p role="status" className={centro ? "text-base text-ink-muted" : "text-xs text-ink-muted"}>
+          {centro ? "O mapa de fundo não carregou (sem internet?). Procure o endereço pelo nome, acima." : "O mapa de fundo não carregou (sem internet?). Os pontos continuam aqui e na lista."}
+        </p>
       )}
     </div>
+  );
+}
+
+/** Pino desenhado por cima do mapa, com a ponta exatamente no centro (o ponto que vai no reporte). */
+function PinoFixo() {
+  return (
+    <svg aria-hidden="true" width="40" height="48" viewBox="0 0 40 48"
+      className="pointer-events-none absolute top-1/2 left-1/2 z-[450] -translate-x-1/2 -translate-y-full drop-shadow-md">
+      <path d="M20 46C20 46 4 30 4 18a16 16 0 0 1 32 0c0 12-16 28-16 28Z" fill="var(--qr-destaque)" stroke="#fff" strokeWidth="3" />
+      <circle cx="20" cy="18" r="6" fill="#fff" />
+    </svg>
   );
 }
 
