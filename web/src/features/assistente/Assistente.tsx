@@ -1,14 +1,13 @@
 "use client";
 // Tirar dúvida: chat com o assistente RAG (fontes citadas, "não sei", "Isso ajudou?") e
 // "Falar" (voz: STT → RAG → TTS). Guardrail nível 1/2 abre a tela de emergência no lugar da resposta.
-import { Camera, Mic, RotateCcw, Send, Trash2 } from "lucide-react";
+import { CircleAlert, Mic, RotateCcw, Send, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, ErroAPI } from "@/providers/api";
 import type { GuardrailResultado, Mensagem, RespostaAssistente } from "@/providers/tipos";
 import { useAppState, type MensagemConversa } from "@/state/AppState";
 import { Aviso } from "@/ui/Aviso";
-import { Botao, BotaoLink } from "@/ui/Botao";
-import { CampoTexto } from "@/ui/CampoTexto";
+import { Botao } from "@/ui/Botao";
 import { Balao } from "@/ui/Conversa";
 import { Carregando } from "@/ui/Estados";
 import { TelaEmergencia } from "@/ui/TelaEmergencia";
@@ -116,7 +115,7 @@ export function Assistente() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="grid gap-1">
           <h1 className="text-[26px] leading-8 font-medium tracking-[-0.025em]">Tirar dúvida</h1>
-          <p className="text-ink-muted">Pergunte sobre problemas de rua e serviços da cidade. Eu mostro de onde tirei a resposta.</p>
+          <p className="text-ink-muted">Pergunte sobre problemas de rua e serviços da cidade.</p>
         </div>
         {conversa.length > 0 && (
           <Botao variante="link" icone={Trash2} onClick={() => { fala.parar(); despachar({ tipo: "limparConversa" }); }}>Limpar conversa</Botao>
@@ -125,12 +124,12 @@ export function Assistente() {
 
       {conversa.length === 0 && !pendente && (
         <div className="grid gap-2">
-          <p className="font-semibold">Experimente perguntar:</p>
+          <p className="text-base text-ink-muted">Por exemplo:</p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {EXEMPLOS.map((e) => (
               <li key={e}>
                 <button type="button" onClick={() => perguntar(e)}
-                  className="min-h-toque w-full cursor-pointer rounded-control px-4 py-2.5 text-left text-[17px] shadow-[inset_0_0_0_1.5px_var(--qr-line-strong)] hover:bg-rail-active/45">
+                  className="min-h-toque w-full cursor-pointer rounded-control bg-surface-raised px-4 py-2.5 text-left text-[17px] shadow-[inset_0_0_0_1px_var(--qr-line-strong)] hover:bg-rail-active/45">
                   {e}
                 </button>
               </li>
@@ -182,20 +181,31 @@ export function Assistente() {
           destacado={destacarVoz} />
       )}
 
-      <form noValidate onSubmit={(e) => { e.preventDefault(); if (!enviando) perguntar(texto); }} className="grid gap-3">
-        <CampoTexto id="pergunta" rotulo="Sua pergunta" value={texto} maxLength={1000} erro={erroCampo ?? undefined}
-          placeholder="Ex.: de quem é a responsabilidade pela calçada?" autoComplete="off"
-          onChange={(e) => { setTexto(e.target.value); if (erroCampo) setErroCampo(null); }} />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Botao type="submit" icone={Send} bloco aria-busy={enviando}>{enviando ? "Enviando…" : "Enviar"}</Botao>
-          {!modoVoz && <Botao variante="secundario" icone={Mic} bloco onClick={() => setModoVoz(true)}>Falar</Botao>}
+      <form noValidate onSubmit={(e) => { e.preventDefault(); if (!enviando) perguntar(texto); }} className="grid gap-1.5">
+        <label htmlFor="pergunta" className="text-[17px] font-semibold">Sua pergunta</label>
+        <div className={`flex items-center gap-1 rounded-control border-[1.5px] bg-surface-raised p-1 pl-4 ${erroCampo ? "border-2 border-danger" : "border-line-strong"}`}>
+          <input id="pergunta" value={texto} maxLength={1000} autoComplete="off" placeholder="Escreva aqui"
+            aria-invalid={erroCampo ? true : undefined} aria-describedby={erroCampo ? "pergunta-erro" : undefined}
+            onChange={(e) => { setTexto(e.target.value); if (erroCampo) setErroCampo(null); }}
+            className="min-h-toque min-w-0 flex-1 bg-transparent text-[17px] text-ink placeholder:text-ink-muted" />
+          {!modoVoz && (
+            <button type="button" onClick={() => setModoVoz(true)} aria-label="Falar a pergunta" title="Falar"
+              className="grid size-12 shrink-0 cursor-pointer place-items-center rounded-full text-ink hover:bg-rail-active/55">
+              <Mic aria-hidden="true" className="size-6" strokeWidth={1.75} />
+            </button>
+          )}
+          <button type="submit" aria-busy={enviando} aria-label={enviando ? "Enviando" : "Enviar pergunta"} title="Enviar"
+            className="grid size-12 shrink-0 cursor-pointer place-items-center rounded-full bg-primary text-primary-foreground hover:bg-brand-hover">
+            <Send aria-hidden="true" className="size-5" strokeWidth={1.75} />
+          </button>
         </div>
+        {erroCampo && (
+          <p id="pergunta-erro" role="alert" className="flex items-center gap-1.5 text-base font-semibold text-danger">
+            <CircleAlert aria-hidden="true" className="size-[18px]" />{erroCampo}
+          </p>
+        )}
       </form>
 
-      <p className="flex flex-wrap items-center gap-x-2 text-ink-muted">
-        Quer avisar um problema na rua?
-        <BotaoLink href="/reportar" variante="link" icone={Camera} className="px-1! min-h-toque">Reportar</BotaoLink>
-      </p>
     </Painel>
   );
 }

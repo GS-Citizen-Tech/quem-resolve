@@ -5,23 +5,33 @@ import type { ReactNode } from "react";
 import type { ErroAPI } from "@/providers/api";
 import { Aviso } from "@/ui/Aviso";
 
-export function CabecalhoTela({ titulo, descricao, atualizar, carregando, children }: {
+export const BOTAO_CONSOLE = "inline-flex min-h-console cursor-pointer items-center gap-1.5 rounded-chip border border-line-strong bg-surface-raised px-3 text-sm font-semibold text-ink hover:border-ink";
+
+export function BotaoAtualizar({ atualizar, carregando }: { atualizar: () => void; carregando?: boolean }) {
+  return (
+    <button type="button" onClick={atualizar} aria-busy={carregando || undefined} className={BOTAO_CONSOLE}>
+      <RefreshCw aria-hidden="true" className={`size-4 ${carregando ? "animate-spin motion-reduce:animate-none" : ""}`} />
+      {carregando ? "Atualizando…" : "Atualizar"}
+    </button>
+  );
+}
+
+export function CabecalhoTela({ titulo, descricao, atualizar, carregando, children, acoes }: {
   titulo: string; descricao?: string; atualizar?: () => void; carregando?: boolean; children?: ReactNode;
+  /** Botões da tela, à esquerda do "Atualizar". */
+  acoes?: ReactNode;
 }) {
   return (
-    <header className="glass grid gap-4 rounded-panel p-4 md:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <header className="grid gap-3 pt-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="grid gap-0.5">
-          <h1 className="text-[26px] leading-8 font-medium tracking-[-0.03em]">{titulo}</h1>
+          <h1 className="text-2xl leading-8 font-semibold tracking-[-0.025em]">{titulo}</h1>
           {descricao && <p className="text-sm text-ink-muted">{descricao}</p>}
         </div>
-        {atualizar && (
-          <button type="button" onClick={atualizar} aria-busy={carregando || undefined}
-            className="inline-flex min-h-console cursor-pointer items-center gap-1.5 rounded-chip px-3 text-sm font-semibold shadow-[inset_0_0_0_1.5px_var(--qr-line-strong)] hover:bg-rail-active/55">
-            <RefreshCw aria-hidden="true" className={`size-4 ${carregando ? "animate-spin motion-reduce:animate-none" : ""}`} />
-            {carregando ? "Atualizando…" : "Atualizar"}
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {acoes}
+          {atualizar && <BotaoAtualizar atualizar={atualizar} carregando={carregando} />}
+        </div>
       </div>
       {children}
     </header>
@@ -35,7 +45,7 @@ export function ErroConsulta({ erro, tentar, temDados }: { erro: ErroAPI; tentar
       acao={<button type="button" onClick={tentar} className="mt-1 inline-flex min-h-console w-max cursor-pointer items-center gap-1.5 rounded-chip bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-brand-hover">
         <RefreshCw aria-hidden="true" className="size-4" />Tentar de novo
       </button>}>
-      {erro.tipo === "offline" ? "A API não respondeu." : erro.mensagem} {temDados ? "Os números abaixo são da última vez que carregou." : "Seus filtros continuam marcados."}
+      {erro.tipo === "offline" ? "O servidor não respondeu." : erro.mensagem} {temDados ? "Os números abaixo são da última vez que carregou." : "Seus filtros continuam marcados."}
     </Aviso>
   );
 }

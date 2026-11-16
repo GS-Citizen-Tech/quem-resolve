@@ -1,11 +1,9 @@
 "use client";
 // Etapa 1 · Captura (v1.1): três cartões com o que já temos (o que você viu, foto, local).
 // Sem cara de formulário: o local vem sozinho, com o endereço por extenso, e só se pede o que falta.
-import { ArrowRight, Camera, CircleAlert, LoaderCircle, MapPin, MapPinned, MessageSquareText, Search } from "lucide-react";
+import { ArrowRight, CircleAlert, LoaderCircle, MapPinned, Mic, Search, Square } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
 import { Aviso } from "@/ui/Aviso";
-import { BolaFalar } from "@/ui/BolaFalar";
 import { Botao } from "@/ui/Botao";
 import { CampoTexto } from "@/ui/CampoTexto";
 import { FolhaMapa } from "@/ui/FolhaMapa";
@@ -87,36 +85,38 @@ export function Captura({ descricao, local, endereco, previa, preparandoFoto, er
   };
 
   const semGps = faseLocal === "negado" || faseLocal === "indisponivel";
-  const rotuloBola = ditado.ouvindo ? "Parar de ouvir" : descricao.trim() ? "Falar mais" : "Toque e fale";
+  const rotuloBola = ditado.ouvindo ? "Parar" : descricao.trim() ? "Falar mais" : "Falar";
 
   return (
     <form noValidate onSubmit={continuar} className="grid gap-4">
       <div className="grid gap-1">
         <h1 className="text-[26px] leading-8 font-medium tracking-[-0.025em]">Novo reporte</h1>
-        <p className="text-ink-muted">Conte o que viu. A gente descobre quem resolve.</p>
-      </div>
+              </div>
 
-      <Cartao icone={MessageSquareText} titulo="O que você viu" indice={0}>
+      <Cartao titulo="O que você viu" indice={0}>
         <CampoTexto ref={campo} id="descricao" multilinha obrigatorio rotuloOculto rotulo="Descreva o problema" maxLength={1000}
           placeholder="Ex.: buraco grande na rua, perto do ponto de ônibus" value={descricao} erro={erroDescricao ?? undefined}
+          className={ditado.suportado ? "pb-16" : ""}
+          dentro={ditado.suportado ? (
+            <button type="button" onClick={ditado.ouvindo ? ditado.parar : ditado.iniciar} aria-pressed={ditado.ouvindo}
+              className={`inline-flex min-h-toque cursor-pointer items-center gap-2 rounded-pill px-4 text-base font-semibold ${ditado.ouvindo ? "bg-danger text-on-emergency" : "bg-primary text-primary-foreground hover:bg-brand-hover"}`}>
+              {ditado.ouvindo ? <Square aria-hidden="true" className="size-4" fill="currentColor" /> : <Mic aria-hidden="true" className="size-5" strokeWidth={1.75} />}
+              {rotuloBola}
+            </button>
+          ) : undefined}
           onChange={(e) => { aoMudar({ descricao: e.target.value }); if (erroDescricao) setErroDescricao(null); }} />
-        {ditado.suportado && (
-          <BolaFalar tamanho="media" ouvindo={ditado.ouvindo} rotulo={rotuloBola}
-            dica={ditado.ouvindo ? "Estou ouvindo… fale o problema." : undefined}
-            aoTocar={ditado.ouvindo ? ditado.parar : ditado.iniciar} />
-        )}
-        {ditado.ouvindo && <p role="status" className="sr-only">Estou ouvindo. Fale o problema.</p>}
+        {ditado.ouvindo && <p role="status" className="text-base text-ink-muted">Estou ouvindo. Fale o problema.</p>}
         {ditado.erro && <p role="alert" className="text-base text-ink-muted">{ditado.erro}</p>}
         {ditado.suportado === false && (
-          <p className="text-base text-ink-muted">Este navegador não tem ditado. Você pode digitar normalmente (ou usar o microfone do teclado do celular).</p>
+          <p className="text-base text-ink-muted">Este navegador não tem ditado. Digite ou use o microfone do teclado.</p>
         )}
       </Cartao>
 
-      <Cartao icone={Camera} titulo="Foto" extra="opcional" indice={1}>
+      <Cartao titulo="Foto" extra="opcional" indice={1}>
         <FotoEntrada comTitulo={false} previa={previa} ocupado={preparandoFoto} erro={erroFoto} aoEscolher={aoFoto} aoRemover={aoRemoverFoto} />
       </Cartao>
 
-      <Cartao icone={MapPin} titulo="Local" indice={2}>
+      <Cartao titulo="Local" indice={2}>
         {faseLocal === "buscando" && !local ? (
           <p role="status" className="flex items-center gap-2 text-[17px]">
             <LoaderCircle aria-hidden="true" className="size-5 animate-spin text-destaque motion-reduce:animate-none" />Procurando onde você está…
@@ -130,7 +130,7 @@ export function Captura({ descricao, local, endereco, previa, preparandoFoto, er
               </strong>
               {!endereco && falhou && <span className="text-base text-ink-muted">Não achei o nome da rua, mas o ponto vai certinho para o órgão.</span>}
             </p>
-            <Botao ref={botaoLocal} variante="secundario" icone={MapPinned} onClick={() => setMapaAberto(true)}>Não é aqui? Ajustar no mapa</Botao>
+            <Botao ref={botaoLocal} variante="secundario" icone={MapPinned} onClick={() => setMapaAberto(true)}>Ajustar no mapa</Botao>
           </div>
         ) : (
           <div className="grid gap-3">
@@ -162,13 +162,12 @@ export function Captura({ descricao, local, endereco, previa, preparandoFoto, er
   );
 }
 
-function Cartao({ icone: Icone, titulo, extra, indice, children }: {
-  icone: LucideIcon; titulo: string; extra?: string; indice: number; children: ReactNode;
+function Cartao({ titulo, extra, indice, children }: {
+  titulo: string; extra?: string; indice: number; children: ReactNode;
 }) {
   return (
     <section className="glass-card entrada grid gap-3 rounded-card p-5" style={{ "--i": indice } as React.CSSProperties} aria-label={titulo}>
       <h2 className="flex flex-wrap items-center gap-x-2 text-[17px] font-semibold">
-        <Icone aria-hidden="true" className="size-5 text-destaque" strokeWidth={1.75} />
         {titulo}{extra && <span className="font-normal text-ink-muted">({extra})</span>}
       </h2>
       {children}

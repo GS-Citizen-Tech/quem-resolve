@@ -24,8 +24,8 @@ export function BolaFalar({ tamanho = "grande", ouvindo = false, rotulo, dica, a
   const d = DIM[tamanho];
   const Icone = href ? Camera : ouvindo ? Square : Mic;
   const bola = <Icone aria-hidden="true" className={d.icone} strokeWidth={ouvindo ? 2.5 : 1.75} fill={ouvindo ? "currentColor" : "none"} />;
-  // O anel pulsa sempre na tela inicial (chama o olho) e, no cartão, só enquanto ouve.
-  const pulsando = ouvindo || tamanho === "grande";
+  // O anel só pulsa enquanto ouve. Parada, a bola é sólida com sombra suave.
+  const pulsando = ouvindo;
   return (
     <div className="grid justify-items-center gap-3 text-center">
       <span className={`relative isolate rounded-full ${pulsando ? "pulso" : ""}`}>

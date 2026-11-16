@@ -20,7 +20,7 @@ export function Confirmacao({ r, categoria, responsavel, temFoto, enviando, erro
       </div>
       <ResumoSolicitacao itens={[
         { rotulo: "Problema", valor: categoria.nome, icone: Tag },
-        { rotulo: "Quem resolve", valor: responsavel ? `${responsavel.nome} · ${responsavel.canal}` : "A confirmar", icone: Building2 },
+        { rotulo: "Quem resolve", valor: responsavel ? `${responsavel.nome}, pelo ${responsavel.canal}` : "A confirmar", icone: Building2 },
         { rotulo: "Local", valor: local, icone: MapPin },
         { rotulo: "Descrição", valor: r.descricao, icone: FileText },
         { rotulo: "Foto", valor: temFoto ? "Vai junto, com rostos e placas borrados. Só o órgão vê, e ela é apagada 90 dias depois de resolvido." : "Sem foto", icone: Camera },

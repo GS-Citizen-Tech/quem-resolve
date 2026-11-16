@@ -4,7 +4,7 @@
 // - Bairro: só os relatos dali; o painel mostra o resumo do bairro e leva à fila filtrada.
 // - Bolas: tamanho = nº de reportes do mesmo problema (agrupamento de duplicatas), cor = prioridade, forma = quem achou.
 // A lista (recolhida) tem os mesmos pontos: funciona sem mapa, sem internet para o fundo e com leitor de tela.
-import { ArrowLeft, ChevronRight, Clock, FilterX, ListOrdered, MapPinned, RefreshCw, SlidersHorizontal, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ChevronRight, Clock, FilterX, ListOrdered, MapPinned, SlidersHorizontal, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -14,8 +14,9 @@ import { Aviso } from "@/ui/Aviso";
 import { Carregando } from "@/ui/Estados";
 import { GraficoPlotly } from "@/ui/GraficoPlotly";
 import { LegendaMapa, MapaOcorrencias, tomDaOcorrencia, type AreasMapa, type PontoMapa } from "@/ui/MapaOcorrencias";
+import { Selecao } from "@/ui/Selecao";
 import { SeloOrigem, SeloPrioridade, SeloStatus } from "@/ui/Selo";
-import { ErroConsulta } from "./Comum";
+import { BOTAO_CONSOLE, BotaoAtualizar, ErroConsulta } from "./Comum";
 import { agrupar, type Grupo } from "./Filas";
 import { FiltrosConsole, VazioFiltrado } from "./FiltrosConsole";
 import { dataCurta, NOME_ORIGEM, NOME_STATUS, useBase, useConsulta, useDistritos, useFiltros, type ChaveFiltro } from "./hooks";
@@ -87,54 +88,50 @@ export function Mapa() {
 
   return (
     <>
-      <header className="glass grid gap-3 rounded-panel p-4 md:p-5">
+      <header className="grid gap-3 pt-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="grid gap-0.5">
-            <h1 className="text-[26px] leading-8 font-medium tracking-[-0.03em]">Mapa</h1>
-            <nav aria-label="Onde você está no mapa" className="flex flex-wrap items-center gap-1 text-sm">
+          <div className="flex flex-wrap items-center gap-x-2">
+            <h1 className="text-2xl leading-8 font-semibold tracking-[-0.025em]">Mapa</h1>
+            <nav aria-label="Onde você está no mapa" className="flex flex-wrap items-center gap-1 text-2xl leading-8 tracking-[-0.025em] text-ink-muted">
+              <ChevronRight aria-hidden="true" className="size-5" />
               {distrito ? (
-                <button type="button" onClick={() => escolherDistrito(null)} className="min-h-console cursor-pointer font-semibold underline underline-offset-4 hover:text-destaque">São Paulo</button>
-              ) : <span className="font-semibold" aria-current="page">São Paulo · toda a cidade</span>}
+                <button type="button" onClick={() => escolherDistrito(null)} className="cursor-pointer underline decoration-1 underline-offset-4 hover:text-ink">São Paulo</button>
+              ) : <span aria-current="page">São Paulo</span>}
               {distrito && <>
-                <ChevronRight aria-hidden="true" className="size-4 text-ink-muted" />
-                <span className="font-semibold" aria-current="page">{nomeDistrito(distrito)}</span>
+                <ChevronRight aria-hidden="true" className="size-5" />
+                <span className="font-semibold text-ink" aria-current="page">{nomeDistrito(distrito)}</span>
               </>}
             </nav>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="sr-only" htmlFor="ir-bairro">Ir para o bairro</label>
-            <select id="ir-bairro" value={distrito ?? ""} onChange={(e) => escolherDistrito(e.target.value || null)}
-              className="min-h-console w-56 cursor-pointer rounded-chip border-[1.5px] border-line-strong bg-surface-raised px-2.5 text-sm text-ink">
+            <Selecao id="ir-bairro" value={distrito ?? ""} onChange={(e) => escolherDistrito(e.target.value || null)} className="w-56">
               <option value="">Ir para o bairro…</option>
               {distritos.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
-            </select>
-            <button type="button" onClick={() => { atualizar(); if (!malha) recarregarMalha(); }} aria-busy={carregando || undefined}
-              className="inline-flex min-h-console cursor-pointer items-center gap-1.5 rounded-chip px-3 text-sm font-semibold shadow-[inset_0_0_0_1.5px_var(--qr-line-strong)] hover:bg-rail-active/55">
-              <RefreshCw aria-hidden="true" className={`size-4 ${carregando ? "animate-spin motion-reduce:animate-none" : ""}`} />
-              {carregando ? "Atualizando…" : "Atualizar"}
-            </button>
+            </Selecao>
+            <BotaoAtualizar atualizar={() => { atualizar(); if (!malha) recarregarMalha(); }} carregando={carregando} />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div role="radiogroup" aria-label="Período" className="inline-flex rounded-pill p-1 shadow-[inset_0_0_0_1.5px_var(--qr-line-strong)]">
+          <div role="radiogroup" aria-label="Período" className="inline-flex rounded-chip border border-line-strong bg-surface-raised p-0.5">
             {PERIODOS.map((p) => (
               <button key={p.valor} type="button" role="radio" aria-checked={periodo === p.valor} onClick={() => mudarPeriodo(p.valor)}
-                className={`inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-pill px-3 text-sm font-semibold ${periodo === p.valor ? "bg-rail-active text-on-rail-active" : "text-ink-muted hover:text-ink"}`}>
-                {periodo === p.valor && <Clock aria-hidden="true" className="size-3.5" />}{p.rotulo}
+                className={`inline-flex min-h-[30px] cursor-pointer items-center rounded-[7px] px-3 text-sm ${periodo === p.valor ? "bg-primary font-semibold text-primary-foreground" : "font-medium text-ink-muted hover:text-ink"}`}>
+                {p.rotulo}
               </button>
             ))}
           </div>
           {outrosFiltros.map((k) => (
             <button key={k} type="button" onClick={() => definir(k, undefined)} aria-label={`Tirar o filtro ${valorFiltro(k, filtros[k]!, nomeCategoria)}`}
-              className="inline-flex min-h-console cursor-pointer items-center gap-1.5 rounded-pill bg-rail-active px-3 text-sm font-semibold text-on-rail-active">
+              className="inline-flex min-h-console cursor-pointer items-center gap-1.5 rounded-chip bg-destaque-soft px-3 text-sm font-semibold text-ink hc:border-2 hc:border-line-strong">
               {valorFiltro(k, filtros[k]!, nomeCategoria)}<FilterX aria-hidden="true" className="size-4" />
             </button>
           ))}
           <details className="group relative">
-            <summary className="inline-flex min-h-console cursor-pointer list-none items-center gap-1.5 rounded-pill px-3 text-sm font-semibold shadow-[inset_0_0_0_1.5px_var(--qr-line-strong)] hover:bg-rail-active/55 [&::-webkit-details-marker]:hidden">
+            <summary className={`${BOTAO_CONSOLE} list-none [&::-webkit-details-marker]:hidden`}>
               <SlidersHorizontal aria-hidden="true" className="size-4" />Filtros
             </summary>
-            <div className="glass absolute left-0 z-[600] mt-2 w-[min(92vw,640px)] rounded-card p-4">
+            <div className="absolute left-0 z-[600] mt-2 w-[min(92vw,660px)] rounded-card border border-line-strong bg-surface-raised p-4 shadow-glass">
               <FiltrosConsole mostrar={["categoria", "responsavel", "origem", "status"]} />
             </div>
           </details>
@@ -163,10 +160,7 @@ export function Mapa() {
                 )}
               </div>
             </div>
-            <details className="rounded-card px-1">
-              <summary className="min-h-console cursor-pointer py-2 text-sm font-semibold">Legenda</summary>
-              <div className="pb-2"><LegendaMapa bolhas faixas={malha ? FAIXAS : undefined} /></div>
-            </details>
+            <LegendaMapa bolhas faixas={malha ? FAIXAS : undefined} />
           </section>
           <ListaPontos grupos={grupos} selecionado={escolhido?.principal.id} escolher={setSelecionado} />
         </>
@@ -212,25 +206,22 @@ function ResumoCidade({ grupos, abertos, temMalha, carregandoMalha, escolher }: 
         <>
           <h3 className="font-semibold">Bairros com mais problemas abertos</h3>
           <ol className="grid gap-1">
-            {top.map(([id, n], i) => (
+            {top.map(([id, n]) => (
               <li key={id}>
                 <button type="button" onClick={() => escolher(id)}
                   className="flex min-h-console w-full cursor-pointer items-center gap-2 rounded-chip px-2 text-left hover:bg-rail-active/45">
-                  <span className="w-4 text-xs text-ink-muted">{i + 1}.</span>
-                  <span className="font-semibold">{nomeDistrito(id)}</span>
-                  <span className="ml-auto tabular-nums">{n}</span>
-                  <ChevronRight aria-hidden="true" className="size-4 text-ink-muted" />
+                  <span>{nomeDistrito(id)}</span>
+                  <span className="ml-auto font-semibold tabular-nums">{n}</span>
                 </button>
               </li>
             ))}
           </ol>
-          <p className="text-xs text-ink-muted">Toque num bairro no mapa (ou escolha em “Ir para o bairro”) para ver só os relatos dele.</p>
         </>
       ) : (
         <Aviso tipo={carregandoMalha ? "info" : "warn"} titulo={carregandoMalha ? "Carregando os bairros…" : "Bairros ainda não carregados"}>
           {carregandoMalha
-            ? "Na primeira vez a API busca os 96 distritos no IBGE. Os pontos já aparecem."
-            : "O IBGE não respondeu agora. Os pontos aparecem normalmente e o mapa tenta de novo sozinho em 30 segundos."}
+            ? "Os pontos já aparecem."
+            : "Os pontos aparecem normalmente. O mapa tenta de novo sozinho em 30 segundos."}
         </Aviso>
       )}
     </section>
@@ -259,13 +250,13 @@ function ResumoBairro({ id, grupos, escolher }: { id: string; grupos: Grupo[]; e
         {maior && maior.itens.length > 1 && (
           <button type="button" onClick={() => escolher(maior.principal.id)} className="flex min-h-console cursor-pointer items-center gap-2 rounded-chip px-2 text-left hover:bg-rail-active/45">
             <MapPinned aria-hidden="true" className="size-4 shrink-0 text-destaque" />
-            <span>Mais reportado: <strong>{nomeCategoria(maior.principal.categoria_final)}</strong> · {maior.itens.length} reportes</span>
+            <span>Mais reportado: <strong>{nomeCategoria(maior.principal.categoria_final)}</strong>, {maior.itens.length} reportes</span>
           </button>
         )}
         {maisAntigo && (
           <button type="button" onClick={() => escolher(maisAntigo.principal.id)} className="flex min-h-console cursor-pointer items-center gap-2 rounded-chip px-2 text-left hover:bg-rail-active/45">
             <Clock aria-hidden="true" className="size-4 shrink-0 text-destaque" />
-            <span>Aberto há mais tempo: <strong>{nomeCategoria(maisAntigo.principal.categoria_final)}</strong> · há {diasDesde(maisAntigo.principal.criada_em)} dias</span>
+            <span>Aberto há mais tempo: <strong>{nomeCategoria(maisAntigo.principal.categoria_final)}</strong>, há {diasDesde(maisAntigo.principal.criada_em)} dias</span>
           </button>
         )}
       </>}
@@ -314,7 +305,7 @@ function ListaPontos({ grupos, selecionado, escolher }: { grupos: Grupo[]; selec
   const ordem = useMemo(() => [...grupos].sort((a, b) => b.itens.length - a.itens.length || b.principal.prioridade - a.principal.prioridade), [grupos]);
   return (
     <details className="glass rounded-panel p-3 md:p-4">
-      <summary className="min-h-console cursor-pointer text-base font-semibold">Ver em lista · {grupos.length} pontos</summary>
+      <summary className="min-h-console cursor-pointer text-base font-semibold">Ver em lista ({grupos.length} pontos)</summary>
       <ul className="mt-2 grid gap-1">
         {(todas ? ordem : ordem.slice(0, NA_LISTA)).map(({ principal: o, itens }) => (
           <li key={o.id}>

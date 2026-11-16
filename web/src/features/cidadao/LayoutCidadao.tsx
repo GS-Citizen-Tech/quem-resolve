@@ -15,17 +15,18 @@ const ITENS: ItemNav[] = [
 
 export function LayoutCidadao({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-svh max-w-3xl flex-col gap-4 px-4 pt-4 pb-28 md:pb-6">
-      <BarraTopo direita={<>
+    <div className="mx-auto flex min-h-svh max-w-4xl flex-col gap-4 px-4 pt-4 pb-28 md:pb-6">
+      <BarraTopo itens={ITENS} rotulo="Navegação do app" direita={<>
         <BotaoAvisosSom />
         <SeletorTema />
-        <Link href="/gestao" className="hidden rounded-chip px-2 py-3 text-sm font-medium text-ink-muted underline-offset-4 hover:text-ink hover:underline sm:block">
-          Sou servidor público
-        </Link>
       </>} />
       <AlertaSom />
       <main id="conteudo" className="flex-1">{children}</main>
-      <Dock itens={ITENS} rotulo="Navegação do app" fixo />
+      <footer className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 px-2 pt-2 text-sm text-ink-muted">
+        <span>Projeto acadêmico · FIAP 2026</span>
+        <Link href="/gestao" className="rounded-chip py-2 font-medium underline underline-offset-4 hover:text-ink">Sou servidor público</Link>
+      </footer>
+      <Dock itens={ITENS} rotulo="Navegação do app" />
     </div>
   );
 }

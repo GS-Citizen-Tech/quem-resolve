@@ -273,44 +273,58 @@ export function LegendaMapa({ comTrajeto = false, bolhas = false, faixas }: { co
   const forma = (d: string) => <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 fill-ink-muted stroke-surface-raised stroke-2">{d === "c" ? <circle cx="12" cy="12" r="8.5" /> : d === "q" ? <rect x="4" y="4" width="16" height="16" rx="2" /> : <path d="M12 2.5 21.5 12 12 21.5 2.5 12Z" />}</svg>;
   const cor = (c: string, t: string) => <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className={`size-3 rounded-full ${c}`} />{t}</span>;
   const textoFaixa = (i: number) => !faixas ? "" : i === 0 ? `${faixas[0]}` : i < faixas.length ? `${faixas[i - 1] + 1}–${faixas[i]}` : `${faixas[faixas.length - 1] + 1} ou mais`;
+  const linha = "flex flex-wrap items-center gap-x-4 gap-y-1";
+  const nome = "w-16 shrink-0 font-semibold text-ink";
   return (
-    <div className="grid gap-2 text-xs" aria-label="Legenda do mapa">
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-        <span className="inline-flex items-center gap-1.5">{forma("c")}Cidadão</span>
-        <span className="inline-flex items-center gap-1.5">{forma("q")}Ônibus</span>
-        <span className="inline-flex items-center gap-1.5">{forma("l")}Cidadão + ônibus</span>
-        <span className="text-ink-muted">·</span>
-        {cor("bg-danger", "Prioridade alta (4–5)")}
-        {cor("bg-warn", "Média (3)")}
-        {cor("bg-ok", "Baixa (1–2)")}
-        {cor("bg-ink-muted", "Resolvida ou possivelmente resolvida")}
-        {comTrajeto && <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="h-1 w-5 rounded-full bg-chart-1" />Trajeto do ônibus</span>}
+    <dl className="grid gap-1.5 text-xs text-ink-muted" aria-label="Legenda do mapa">
+      <div className={linha}>
+        <dt className={nome}>Cor</dt>
+        <dd className={linha}>
+          {cor("bg-danger", "Prioridade alta")}
+          {cor("bg-warn", "Média")}
+          {cor("bg-ok", "Baixa")}
+          {cor("bg-ink-muted", "Resolvida")}
+          {comTrajeto && <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="h-1 w-5 rounded-full bg-chart-1" />Trajeto do ônibus</span>}
+        </dd>
       </div>
       {bolhas && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="font-semibold">Tamanho = nº de reportes do mesmo problema:</span>
-          {[1, 3, 8].map((n) => (
-            <span key={n} className="inline-flex items-center gap-1.5">
-              <span aria-hidden="true" className="inline-block rounded-full bg-ink-muted" style={{ width: Math.min(22 * Math.sqrt(n), 64) * 0.6, height: Math.min(22 * Math.sqrt(n), 64) * 0.6 }} />
-              {n} {n === 1 ? "reporte" : "reportes"}
-            </span>
-          ))}
-        </div>
-      )}
-      {faixas && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <span className="font-semibold">Bairros: problemas abertos</span>
-          {OPACIDADE_FAIXA.map((op, i) => (
-            <span key={op} className="inline-flex items-center gap-1.5">
-              <span aria-hidden="true" className="relative inline-block size-4 overflow-hidden rounded-[4px] border border-line-strong">
-                <span className="absolute inset-0 bg-destaque" style={{ opacity: op }} />
+        <div className={linha}>
+          <dt className={nome}>Tamanho</dt>
+          <dd className={linha}>
+            {[1, 3, 8].map((n) => (
+              <span key={n} className="inline-flex items-center gap-1.5">
+                <span aria-hidden="true" className="inline-block rounded-full bg-ink-muted" style={{ width: Math.min(22 * Math.sqrt(n), 64) * 0.5, height: Math.min(22 * Math.sqrt(n), 64) * 0.5 }} />
+                {n} {n === 1 ? "reporte" : "reportes"}
               </span>
-              {textoFaixa(i)}
-            </span>
-          ))}
+            ))}
+          </dd>
         </div>
       )}
-    </div>
+      <div className={linha}>
+        <dt className={nome}>Forma</dt>
+        <dd className={linha}>
+          <span className="inline-flex items-center gap-1.5">{forma("c")}Cidadão</span>
+          <span className="inline-flex items-center gap-1.5">{forma("q")}Ônibus</span>
+          <span className="inline-flex items-center gap-1.5">{forma("l")}Os dois</span>
+        </dd>
+      </div>
+      {faixas && (
+        <div className={linha}>
+          <dt className={nome}>Bairros</dt>
+          <dd className={linha}>
+            {OPACIDADE_FAIXA.map((op, i) => (
+              <span key={op} className="inline-flex items-center gap-1.5">
+                <span aria-hidden="true" className="relative inline-block size-3.5 overflow-hidden rounded-[3px] border border-line-strong">
+                  <span className="absolute inset-0 bg-destaque" style={{ opacity: op }} />
+                </span>
+                {textoFaixa(i)}
+              </span>
+            ))}
+            <span>problemas abertos</span>
+          </dd>
+        </div>
+      )}
+    </dl>
   );
 }
 

@@ -1,5 +1,7 @@
 "use client";
-// Barra do topo, dock em pílula e trilho de ícones (design system: Navegacao).
+// Navegação (design system: Navegacao, revista em 16/11).
+// Cidadão: barra do topo com os links no computador; no celular, barra de baixo (Dock).
+// Console: barra lateral com nomes no computador (Trilho); no celular, barra de baixo.
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,28 +14,46 @@ export interface ItemNav { href: string; rotulo: string; icone: LucideIcon; exat
 const ativo = (atual: string, { href, exato }: ItemNav) =>
   href === "/" ? atual === "/" || atual.startsWith("/reportar") : exato ? atual === href : atual.startsWith(href);
 
-export function BarraTopo({ inicio = "/", direita }: { inicio?: string; direita?: ReactNode }) {
+/** `itens`: links que aparecem dentro da barra a partir de 768 px (no celular eles ficam no Dock). */
+export function BarraTopo({ inicio = "/", direita, itens, rotulo, className = "" }: {
+  inicio?: string; direita?: ReactNode; itens?: ItemNav[]; rotulo?: string; className?: string;
+}) {
+  const atual = usePathname();
   return (
-    <header className="glass flex h-16 items-center justify-between gap-4 rounded-bar px-5">
+    <header className={`glass flex h-16 items-center justify-between gap-4 rounded-bar pr-3 pl-5 ${className}`}>
       <Link href={inicio} className="rounded-chip"><Marca /></Link>
-      <div className="flex items-center gap-2">{direita}</div>
+      {itens && (
+        <nav aria-label={rotulo} className="hidden items-center gap-1 md:flex">
+          {itens.map((item) => {
+            const a = ativo(atual, item);
+            return (
+              <Link key={item.href} href={item.href} aria-current={a ? "page" : undefined}
+                className={`flex min-h-toque items-center rounded-pill px-4 text-base whitespace-nowrap ${a ? "bg-rail-active font-semibold text-on-rail-active" : "font-medium text-ink-muted hover:bg-rail-active/45 hover:text-ink"}`}>
+                {item.rotulo}
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+      <div className="flex items-center gap-1">{direita}</div>
     </header>
   );
 }
 
-/** Dock em pílula. No celular, `fixo` vira a navegação principal na base da tela (rótulo sempre visível). */
+/** Barra de baixo, só em telas pequenas. `some`: a partir de qual largura ela sai (os links passam para o topo ou a lateral). */
 /** `sufixo`: texto somado ao link (ex.: "?categoria=buraco"), para os filtros acompanharem a troca de tela. */
-export function Dock({ itens, rotulo, fixo = false, sufixo = "" }: { itens: ItemNav[]; rotulo: string; fixo?: boolean; sufixo?: string }) {
+export function Dock({ itens, rotulo, some = "md", sufixo = "" }: { itens: ItemNav[]; rotulo: string; some?: "md" | "lg" | "nunca"; sufixo?: string }) {
   const atual = usePathname();
+  const esconde = some === "md" ? "md:hidden" : some === "lg" ? "lg:hidden" : "";
   return (
     <nav aria-label={rotulo}
-      className={fixo ? "glass fixed inset-x-3 bottom-3 z-20 flex justify-between gap-1 rounded-pill p-1.5 md:static md:inset-auto md:mx-auto md:w-max" : "glass mx-auto flex w-max gap-1 rounded-pill p-1.5"}>
+      className={`glass fixed inset-x-3 bottom-3 z-20 flex justify-between gap-1 rounded-pill p-1.5 ${esconde}`}>
       {itens.map((item) => {
         const { href, rotulo: r, icone: Icone } = item;
         const a = ativo(atual, item);
         return (
           <Link key={href} href={href + sufixo} aria-current={a ? "page" : undefined}
-            className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-pill px-3 text-[13px] font-medium whitespace-nowrap md:min-h-toque md:flex-row md:gap-2 md:px-[18px] md:text-[15px] ${a ? "bg-rail-active text-on-rail-active shadow-float hc:shadow-none" : "text-ink-muted hover:bg-rail-active/45 hover:text-ink"}`}>
+            className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-pill px-2 text-[13px] whitespace-nowrap ${a ? "bg-rail-active font-semibold text-on-rail-active shadow-float hc:shadow-none" : "font-medium text-ink-muted hover:bg-rail-active/45 hover:text-ink"}`}>
             <Icone aria-hidden="true" className="size-5" strokeWidth={1.75} />
             {r}
           </Link>
@@ -43,18 +63,19 @@ export function Dock({ itens, rotulo, fixo = false, sufixo = "" }: { itens: Item
   );
 }
 
-/** Trilho vertical (só desktop, só ícones: cada um com aria-label e dica). */
+/** Navegação lateral do console (computador): ícone e nome, uma linha por tela. */
 export function Trilho({ itens, rotulo, sufixo = "" }: { itens: ItemNav[]; rotulo: string; sufixo?: string }) {
   const atual = usePathname();
   return (
-    <nav aria-label={rotulo} className="glass hidden w-max flex-col gap-2 rounded-pill p-1.5 lg:flex">
+    <nav aria-label={rotulo} className="grid gap-0.5">
       {itens.map((item) => {
         const { href, rotulo: r, icone: Icone } = item;
         const a = ativo(atual, item);
         return (
-          <Link key={href} href={href + sufixo} aria-label={r} title={r} aria-current={a ? "page" : undefined}
-            className={`grid size-12 place-items-center rounded-full ${a ? "bg-rail-active text-on-rail-active shadow-float hc:shadow-none" : "text-ink-muted hover:bg-rail-active/45 hover:text-ink"}`}>
-            <Icone aria-hidden="true" className="size-5" strokeWidth={1.75} />
+          <Link key={href} href={href + sufixo} aria-current={a ? "page" : undefined}
+            className={`flex min-h-10 items-center gap-2.5 rounded-chip px-2.5 text-[15px] ${a ? "bg-primary font-semibold text-primary-foreground" : "font-medium text-ink-muted hover:bg-rail-active/55 hover:text-ink"}`}>
+            <Icone aria-hidden="true" className="size-[18px]" strokeWidth={a ? 2 : 1.75} />
+            {r}
           </Link>
         );
       })}

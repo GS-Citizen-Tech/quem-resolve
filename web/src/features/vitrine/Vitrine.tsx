@@ -1,6 +1,6 @@
 "use client";
 // Vitrine dos componentes de ui/ em todos os estados (útil para conferir o design e para o vídeo).
-import { Camera, MapPin, Send } from "lucide-react";
+import { Camera, Send } from "lucide-react";
 import { useState } from "react";
 import { Aviso } from "@/ui/Aviso";
 import { Botao, BotaoEmergencia } from "@/ui/Botao";
@@ -70,7 +70,7 @@ export function Vitrine() {
           </div>
         </CartaoVidro>
 
-        <CartaoVidro rotulo="Quem resolve" icone={MapPin} titulo="Prefeitura (subprefeitura)" indice={5}>
+        <CartaoVidro rotulo="Quem resolve" titulo="Prefeitura (subprefeitura)" indice={5}>
           <p className="mt-1">Canal: SP156 · 156</p>
           <p className="mt-3 flex gap-2 text-ink-muted"><Camera aria-hidden="true" className="size-5" /> Identificado pela foto</p>
         </CartaoVidro>

@@ -39,9 +39,15 @@ A pilha é sempre: **foto → `scrim` → `glass` → `glass-card`**.
 
 Versão sólida: `surface-solid` substitui o vidro quando o sistema pede **transparência reduzida**, quando o navegador não tem `backdrop-filter` e em telas pesadas (mapa, filas longas), que usam o fundo sem foto: gradiente de `bg` para `bg-2`.
 
+### Console sem vidro (revisão de 16/11/2026)
+
+O vidro é a identidade do **app do cidadão**. O **console** é ferramenta de trabalho e usa superfície sólida: tudo que estiver dentro de `.console` (posto pelo `LayoutConsole`) troca `glass` e `glass-card` por `surface-solid` com linha fina (`--qr-linha`), sem desfoque e sem sombra grande. Cartão dentro de painel vira seção plana (uma camada só por tela). Raios menores: 14px no painel, 10px no cartão. O fundo do console é liso (`bg`), sem cena. No alto contraste continua preto com borda branca de 2px.
+
+No app do cidadão vale a mesma regra de **uma camada por tela**: um `glass` e, dentro dele, no máximo um nível de `glass-card`.
+
 ## Fundo
 
-Foto de uma rua arborizada de São Paulo no fim de tarde (calçada, árvores, prédios ao fundo, fiação), suave, sem pessoas identificáveis e sem placas de órgãos. `assets/Fundos/sp-fim-de-tarde.svg` é a ilustração-guia usada nas prévias; troque pela foto final em WebP de ~1600px. O alto contraste remove a foto.
+Foto de uma rua arborizada de São Paulo no fim de tarde (calçada, árvores, prédios ao fundo, fiação), suave, sem pessoas identificáveis e sem placas de órgãos. `assets/Fundos/sp-fim-de-tarde.svg` é a ilustração-guia usada nas prévias; troque pela foto final em WebP de ~1600px. O alto contraste remove a foto. Enquanto a foto final não chega, o cidadão usa `cena` (degradê de areia com uma luz quente); quando chegar, basta trocar para `cena-foto`. O console não tem cena.
 
 ## Tipografia
 
@@ -58,7 +64,7 @@ Foto de uma rua arborizada de São Paulo no fim de tarde (calçada, árvores, pr
 
 ## Navegação
 
-Barra do topo de vidro com o logo à esquerda. No desktop: trilho vertical de ícones redondos à esquerda e dock em pílula flutuando na base do painel. No celular, o dock é a navegação principal, com rótulo sempre visível. Item ativo: `rail-active` + `shadow-float` (muda forma, não só cor).
+Uma navegação por vez (revisão de 16/11). Cidadão: no computador os 3 itens ficam na barra do topo; no celular, só o dock na base, com rótulo sempre visível. Console: no computador, coluna lateral com ícone e nome, a pessoa, "Aparência" e "Sair"; no celular, barra do topo e dock. Os temas ficam num botão só, "Aparência". Item ativo: `rail-active` + `shadow-float` (muda forma, não só cor).
 
 ## Movimento
 
@@ -67,6 +73,8 @@ Painéis entram com leve subida + desfoque saindo, 0,5s, `cubic-bezier(.2,.7,.2,
 ## Iconografia
 
 **Lucide**, traço 1.75 (2.25 dentro de selos e no botão de emergência), 20px no texto, 24px no botão de emergência. Ícone decorativo leva `aria-hidden`; botão só de ícone leva `aria-label`. Ícones fixos: `circle-check` ok, `triangle-alert` atenção, `octagon-alert` perigo, `info` informação, `circle-help` confiança baixa, `phone` emergência, `mic` voz, `camera` reportar.
+
+Ícone só em botão, navegação e estado (ok, atenção, perigo). Título de seção, indicador e rótulo de cartão não levam ícone.
 
 ## Acessibilidade (regras que não quebram)
 

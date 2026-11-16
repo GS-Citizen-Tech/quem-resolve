@@ -1,11 +1,12 @@
 "use client";
-// Etapa 4 · Resultado: o que a IA entendeu, quem resolve e o "Não é isso" (human-in-the-loop).
-import { ArrowRight, Camera, PenLine, Sparkles, Text, User, Volume2, VolumeX } from "lucide-react";
+// Etapa 4 · Resultado: primeiro quem resolve (a resposta que importa), depois o que a IA entendeu, a foto,
+// "Como a IA chegou nisso" recolhido e o "Não é isso" (human-in-the-loop).
+import { ArrowRight, PenLine, Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
 import { Aviso } from "@/ui/Aviso";
 import { Botao, BotaoEmergencia } from "@/ui/Botao";
 import { FotoComDeteccoes } from "@/ui/FotoComDeteccoes";
-import { Selo, SeloConfianca } from "@/ui/Selo";
+import { SeloConfianca } from "@/ui/Selo";
 import { SeletorCategoria } from "@/ui/SeletorCategoria";
 import { useFala } from "@/ui/useVoz";
 import type { BaseQuemResolve } from "@/providers/base";
@@ -14,9 +15,9 @@ import { QuemResolve } from "./QuemResolve";
 import type { Rascunho } from "./rascunho";
 
 const ORIGEM = {
-  visao: { icone: Camera, texto: "Identificado pela foto" },
-  regras: { icone: Text, texto: "Identificado pelo texto" },
-  llm: { icone: Sparkles, texto: "Identificado pela IA" },
+  visao: "A foto teve o peso maior",
+  regras: "Palavras da sua descrição bateram com este problema",
+  llm: "A IA leu a sua descrição",
 } as const;
 
 export function Resultado({ r, base, previa, aoEscolher, aoContinuar, aoDetalhar }: {
@@ -66,34 +67,33 @@ export function Resultado({ r, base, previa, aoEscolher, aoContinuar, aoDetalhar
         </div>
       )}
       {r.avisoFoto && <Aviso tipo="info" titulo="Não consegui olhar a foto">{r.avisoFoto}</Aviso>}
-      {previa && r.manual !== "falha" && <FotoComDeteccoes src={previa} deteccoes={r.deteccoes} />}
-
-      {categoria && (
-        <div className="grid gap-3 entrada">
-          <h1 className="text-[26px] leading-8 font-medium tracking-[-0.025em]">
-            {daIA ? "Isso parece ser " : "Você escolheu "}<strong className="font-bold">{categoria.nome}</strong>
-          </h1>
-          <div className="flex flex-wrap gap-2">
-            {daIA && a ? <>
-              <SeloConfianca valor={a.confianca} />
-              {a.classificado_por !== "nenhum" && <Selo tom="neutro" icone={ORIGEM[a.classificado_por].icone} texto={ORIGEM[a.classificado_por].texto} />}
-            </> : <Selo tom="info" icone={User} texto="Escolhido por você" />}
-          </div>
-          {daIA && a && <>
-            <p className="text-[18px] leading-7">{a.proximo_passo}</p>
-            <details className="group rounded-control px-1">
-              <summary className="flex min-h-toque cursor-pointer items-center font-semibold underline underline-offset-4">Por que a IA acha isso?</summary>
-              <p className="pb-2 text-ink-muted">
-                {a.explicacao} {a.classificado_por === "visao" ? "A foto teve o peso maior." : a.classificado_por === "regras" ? "Palavras da sua descrição bateram com esta categoria." : a.classificado_por === "llm" ? "Um modelo de linguagem leu a sua descrição." : ""}
-                {r.deteccoes.length > 0 && a.classificado_por !== "visao" ? " A foto também foi analisada." : ""}
-              </p>
-            </details>
-          </>}
-        </div>
-      )}
+      {responsavel && <QuemResolve responsavel={responsavel} indice={0} comoTitulo />}
       {!categoria && r.manual === null && <h1 className="text-[26px] leading-8 font-medium tracking-[-0.025em]">Não consegui identificar o problema</h1>}
 
-      {responsavel && <QuemResolve responsavel={responsavel} indice={1} />}
+      {categoria && (
+        <div className="grid gap-2 entrada" style={{ "--i": 1 } as React.CSSProperties}>
+          <p className="text-[20px] leading-7">
+            {daIA ? "Isso parece ser " : "Você escolheu "}<strong className="font-bold">{categoria.nome}</strong>.
+          </p>
+          {daIA && a && <p className="text-[18px] leading-7 text-ink-muted">{a.proximo_passo}</p>}
+        </div>
+      )}
+
+      {previa && r.manual !== "falha" && <FotoComDeteccoes src={previa} deteccoes={r.deteccoes} />}
+
+      {categoria && daIA && a && (
+        <details className="border-t border-border">
+          <summary className="flex min-h-toque cursor-pointer items-center justify-between gap-3 font-semibold">
+            Como a IA chegou nisso
+            <SeloConfianca valor={a.confianca} />
+          </summary>
+          <p className="pb-2 text-ink-muted">
+            {a.classificado_por !== "nenhum" && `${ORIGEM[a.classificado_por]}. `}
+            {a.explicacao}
+            {r.deteccoes.length > 0 && a.classificado_por !== "visao" ? " A foto também foi analisada." : ""}
+          </p>
+        </details>
+      )}
 
       {categoria && fala.suportado && (
         <Botao variante="link" icone={fala.falando ? VolumeX : Volume2} onClick={() => (fala.falando ? fala.parar() : fala.falar(textoFalado))}>

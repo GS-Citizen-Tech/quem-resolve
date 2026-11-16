@@ -2,9 +2,10 @@
 // Filtros do console (categoria, órgão, origem e status). Ficam na URL: a tela muda na hora e o link pode ser compartilhado.
 import { FilterX } from "lucide-react";
 import { useId } from "react";
+import { Selecao } from "@/ui/Selecao";
 import { NOME_ORIGEM, NOME_STATUS, useBase, useDistritos, useFiltros, type ChaveFiltro } from "./hooks";
 
-const ROTULO: Record<ChaveFiltro, string> = { categoria: "Categoria", responsavel: "Órgão responsável", origem: "Origem", status: "Status", distrito: "Bairro (distrito)" };
+const ROTULO: Record<ChaveFiltro, string> = { categoria: "Categoria", responsavel: "Órgão", origem: "Origem", status: "Status", distrito: "Bairro" };
 
 export function FiltrosConsole({ mostrar = ["categoria", "responsavel", "origem"], padroes = {} }: {
   mostrar?: ChaveFiltro[];
@@ -30,13 +31,12 @@ export function FiltrosConsole({ mostrar = ["categoria", "responsavel", "origem"
         const padrao = padroes[k];
         const atual = filtros[k] ?? padrao ?? "";
         return (
-          <div key={k} className="grid min-w-40 flex-1 gap-1 sm:flex-none">
-            <label htmlFor={`${id}-${k}`} className="text-xs font-semibold text-ink-muted">{ROTULO[k]}</label>
-            <select id={`${id}-${k}`} value={atual} onChange={(e) => definir(k, e.target.value || (padrao ? "todos" : undefined))}
-              className="min-h-console w-full cursor-pointer rounded-chip border-[1.5px] border-line-strong bg-surface-raised px-2.5 text-sm text-ink sm:w-52">
+          <div key={k} className="grid min-w-36 flex-1 gap-1 sm:flex-none">
+            <label htmlFor={`${id}-${k}`} className="text-xs font-medium text-ink-muted">{ROTULO[k]}</label>
+            <Selecao id={`${id}-${k}`} value={atual} onChange={(e) => definir(k, e.target.value || (padrao ? "todos" : undefined))} className="w-full sm:w-48">
               <option value={padrao ? "todos" : ""}>{k === "responsavel" ? "Todos os órgãos" : k === "status" ? "Todos os status" : k === "distrito" ? "Toda a cidade" : "Todas"}</option>
               {opcoes[k].map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
-            </select>
+            </Selecao>
           </div>
         );
       })}
@@ -59,7 +59,7 @@ export function VazioFiltrado({ total }: { total?: number }) {
   const valor = (k: ChaveFiltro, v: string) =>
     k === "categoria" ? nomeCategoria(v) : k === "distrito" ? nomeDistrito(v) : k === "responsavel" ? nomeOrgao(v) : k === "origem" ? NOME_ORIGEM[v as keyof typeof NOME_ORIGEM] : NOME_STATUS[v as keyof typeof NOME_STATUS];
   return (
-    <div className="grid justify-items-start gap-2 rounded-card border-2 border-dashed border-line-strong px-5 py-6">
+    <div className="grid justify-items-start gap-2 px-1 py-4">
       <p className="text-base font-semibold">Nenhuma ocorrência com esses filtros{total ? ` (de ${total} no total)` : ""}.</p>
       {ativos.length > 0 ? (
         <div className="flex flex-wrap gap-2">

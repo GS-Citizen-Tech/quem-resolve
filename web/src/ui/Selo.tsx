@@ -35,10 +35,24 @@ export function SeloConfianca({ valor, compacto = false }: { valor: number; comp
   return <Selo tom={cfg.tom} icone={cfg.icone} compacto={compacto} texto={compacto ? cfg.palavra.replace("Confiança ", "") : `${cfg.palavra} (${pct}%)`} />;
 }
 
-export function SeloPrioridade({ valor, compacto = true }: { valor: number; compacto?: boolean }) {
-  if (valor >= 4) return <Selo tom="danger" icone={OctagonAlert} compacto={compacto} texto={`Prioridade ${valor} · alta`} />;
-  if (valor === 3) return <Selo tom="warn" icone={TriangleAlert} compacto={compacto} texto={`Prioridade ${valor} · média`} />;
-  return <Selo tom="ok" icone={CircleCheck} compacto={compacto} texto={`Prioridade ${valor} · baixa`} />;
+/** `curto`: só "Alta", "Média" ou "Baixa" (em tabela, a coluna já diz que é prioridade). Só a alta e a média levam cor. */
+export function SeloPrioridade({ valor, compacto = true, curto = false }: { valor: number; compacto?: boolean; curto?: boolean }) {
+  const nome = valor >= 4 ? "alta" : valor === 3 ? "média" : "baixa";
+  const texto = curto ? nome[0].toUpperCase() + nome.slice(1) : `Prioridade ${nome}`;
+  if (valor >= 4) return <Selo tom="danger" icone={OctagonAlert} compacto={compacto} texto={texto} />;
+  if (valor === 3) return <Selo tom="warn" icone={TriangleAlert} compacto={compacto} texto={texto} />;
+  if (curto) return <span className="inline-flex min-h-[26px] items-center px-2 text-[13px] text-ink-muted">{texto}</span>;
+  return <Selo tom="neutro" icone={CircleCheck} compacto={compacto} texto={texto} />;
+}
+
+/** Origem em texto simples com ícone (tabelas): sem pílula, para não competir com a prioridade. */
+export function TextoOrigem({ origem }: { origem: Origem }) {
+  const cfg = { cidadao: { icone: User, texto: "Cidadão" }, frota: { icone: Bus, texto: "Ônibus" }, ambos: { icone: Users, texto: "Cidadão e ônibus" } }[origem];
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${origem === "ambos" ? "font-semibold text-ink" : "text-ink-muted"}`}>
+      <cfg.icone aria-hidden="true" className="size-4" strokeWidth={1.75} />{cfg.texto}
+    </span>
+  );
 }
 
 export function SeloOrigem({ origem, compacto = true }: { origem: Origem; compacto?: boolean }) {

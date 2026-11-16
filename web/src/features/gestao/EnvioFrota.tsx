@@ -2,7 +2,7 @@
 // Envio pela tela Frota (v1.0): o gestor manda um vídeo curto ou uma sequência de fotos de uma câmera de ônibus.
 // A API processa em segundo plano (mesmo núcleo do script do ônibus) e esta seção mostra o progresso,
 // o vídeo anotado (já borrado) e os danos, que entram no mapa e nas filas com origem "Ônibus".
-import { Film, ImagePlus, Upload } from "lucide-react";
+import { Film, ImagePlus, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { api, ErroAPI } from "@/providers/api";
 import type { Processamento } from "@/providers/tipos";
@@ -30,7 +30,8 @@ function conferir(arquivos: File[]): string | null {
   return null;
 }
 
-export function EnvioFrota({ aoConcluir }: { aoConcluir: (passagemId: string) => void }) {
+/** `aberto`: mostra o formulário e o último resultado. Fechado, só aparece enquanto um envio está sendo processado. */
+export function EnvioFrota({ aoConcluir, aberto, fechar }: { aoConcluir: (passagemId: string) => void; aberto: boolean; fechar: () => void }) {
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [linha, setLinha] = useState("8000-10");
   const [gpx, setGpx] = useState<File | null>(null);
@@ -105,46 +106,52 @@ export function EnvioFrota({ aoConcluir }: { aoConcluir: (passagemId: string) =>
   const tamanhoMb = arquivos.reduce((a, f) => a + f.size, 0) / 1024 / 1024;
   const m = job?.metricas;
 
+  if (!aberto && !rodando(job)) return null;
   return (
-    <section className="glass grid gap-4 rounded-panel p-3 md:p-4" aria-labelledby="envio-frota-t">
-      <div className="grid gap-0.5">
-        <h2 id="envio-frota-t" className="text-base font-semibold">Processar vídeo ou fotos de um ônibus</h2>
-        <p className="text-sm text-ink-muted">
-          Envie um vídeo curto (até 1 minuto é analisado) ou uma sequência de fotos da rua. A API detecta os danos no asfalto,
-          borra rostos, pessoas e placas e coloca cada dano no mapa. O arquivo enviado é apagado assim que termina.
-        </p>
+    <section className="glass grid gap-4 rounded-panel p-4 md:p-5" aria-labelledby="envio-frota-t">
+      <div className="flex items-start justify-between gap-3">
+        <div className="grid gap-0.5">
+          <h2 id="envio-frota-t" className="text-[15px] font-semibold">Analisar vídeo ou fotos de um ônibus</h2>
+          <p className="text-[13px] text-ink-muted">Até 1 minuto de vídeo. Rostos e placas são borrados e o arquivo é apagado ao terminar.</p>
+        </div>
+        <button type="button" onClick={fechar} aria-label="Fechar o envio" title="Fechar"
+          className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-chip text-ink-muted hover:bg-[color-mix(in_srgb,var(--qr-ink)_6%,transparent)] hover:text-ink">
+          <X aria-hidden="true" className="size-5" />
+        </button>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <label htmlFor="frota-arquivos" onDragOver={(e) => { e.preventDefault(); setArrastando(true); }} onDragLeave={() => setArrastando(false)} onDrop={soltar}
-          className={`grid min-h-32 cursor-pointer place-items-center gap-1 rounded-card border-2 border-dashed px-4 py-5 text-center text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-destaque ${arrastando ? "border-destaque bg-rail-active/45" : "border-line-strong hover:bg-rail-active/30"}`}>
+          className={`flex min-h-24 cursor-pointer items-center gap-4 rounded-card border px-5 py-4 text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-destaque ${arrastando ? "border-destaque bg-destaque-soft" : "border-line-strong bg-surface-raised hover:border-ink"}`}>
           <input id="frota-arquivos" type="file" multiple accept="video/mp4,video/quicktime,video/webm,.mov,.m4v,.avi,.mkv,image/jpeg,image/png,image/webp"
             className="sr-only" onChange={(e) => { escolher(e.target.files); e.target.value = ""; }} />
-          {tipoEscolhido === "video" ? <Film aria-hidden="true" className="size-7" /> : tipoEscolhido === "fotos" ? <ImagePlus aria-hidden="true" className="size-7" /> : <Upload aria-hidden="true" className="size-7" />}
+          {tipoEscolhido === "video" ? <Film aria-hidden="true" className="size-6 shrink-0 text-ink-muted" /> : tipoEscolhido === "fotos" ? <ImagePlus aria-hidden="true" className="size-6 shrink-0 text-ink-muted" /> : <Upload aria-hidden="true" className="size-6 shrink-0 text-ink-muted" />}
           {arquivos.length ? (
-            <span>
+            <span className="grid">
               <strong className="font-semibold">{tipoEscolhido === "video" ? arquivos[0].name : `${arquivos.length} foto${arquivos.length > 1 ? "s" : ""}`}</strong>
-              <span className="text-ink-muted"> · {num(tamanhoMb)} MB · clique para trocar</span>
+              <span className="text-[13px] text-ink-muted">{num(tamanhoMb)} MB. Clique para trocar.</span>
             </span>
           ) : (
-            <span><strong className="font-semibold">Escolha um vídeo ou várias fotos</strong><span className="block text-ink-muted">ou arraste para cá · MP4, MOV, WebM, JPG, PNG</span></span>
+            <span className="grid"><strong className="font-semibold">Escolher um vídeo ou várias fotos</strong><span className="text-[13px] text-ink-muted">Ou arraste para cá. MP4, MOV, WebM, JPG ou PNG.</span></span>
           )}
         </label>
 
         <div className="grid content-start gap-3">
           <div className="grid gap-1">
-            <label htmlFor="frota-linha" className="text-sm font-semibold">Linha do ônibus</label>
+            <label htmlFor="frota-linha" className="text-xs font-medium text-ink-muted">Linha do ônibus</label>
             <input id="frota-linha" value={linha} maxLength={20} onChange={(e) => setLinha(e.target.value)}
-              className="min-h-console w-full rounded-chip border-[1.5px] border-line-strong bg-surface-raised px-3 text-sm" />
+              className="min-h-console w-full rounded-chip border border-line-strong bg-surface-raised px-3 text-sm" />
           </div>
           <div className="grid gap-1">
-            <label htmlFor="frota-gpx" className="text-sm font-semibold">Trajeto GPS <span className="font-normal text-ink-muted">(opcional, .gpx)</span></label>
-            <input id="frota-gpx" type="file" accept=".gpx,application/gpx+xml" onChange={(e) => setGpx(e.target.files?.[0] ?? null)}
-              className="text-xs file:mr-2 file:min-h-console file:cursor-pointer file:rounded-chip file:border-0 file:bg-rail-active/60 file:px-3 file:text-sm file:font-semibold" />
-            <p className="text-xs text-ink-muted">Sem GPS, usa um trajeto simulado na Av. Paulista.</p>
+            <span id="frota-gpx-r" className="text-xs font-medium text-ink-muted">Trajeto do GPS (opcional)</span>
+            <label className="flex min-h-console cursor-pointer items-center gap-2 rounded-chip border border-line-strong bg-surface-raised px-3 text-sm hover:border-ink focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-destaque">
+              <input id="frota-gpx" type="file" accept=".gpx,application/gpx+xml" aria-labelledby="frota-gpx-r" className="sr-only" onChange={(e) => setGpx(e.target.files?.[0] ?? null)} />
+              <span className={`truncate ${gpx ? "font-semibold" : "text-ink-muted"}`}>{gpx ? gpx.name : "Escolher arquivo .gpx"}</span>
+            </label>
+            <p className="text-xs text-ink-muted">Sem ele, o trajeto é de exemplo, na Av. Paulista.</p>
           </div>
           <Botao tamanho="console" icone={Upload} onClick={enviar} aria-busy={enviando || undefined}>
-            {enviando ? "Enviando…" : "Processar"}
+            {enviando ? "Enviando…" : "Analisar"}
           </Botao>
         </div>
       </div>
@@ -155,7 +162,7 @@ export function EnvioFrota({ aoConcluir }: { aoConcluir: (passagemId: string) =>
         <div className="grid gap-3 border-t border-line pt-3" aria-live="polite">
           <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
             <strong className="font-semibold">
-              {job.tipo === "video" ? job.nome : `${job.arquivos} fotos`} · linha {job.linha_onibus}
+              {job.tipo === "video" ? job.nome : `${job.arquivos} fotos`}, linha {job.linha_onibus}
             </strong>
             <span className="text-ink-muted">
               {job.status === "na_fila" && "Na fila…"}
@@ -185,31 +192,30 @@ export function EnvioFrota({ aoConcluir }: { aoConcluir: (passagemId: string) =>
                     <div className="grid aspect-video w-full place-items-center rounded-card bg-rail-active/40 text-sm text-ink-muted">Carregando o vídeo anotado…</div>
                   )}
                   <figcaption className="text-xs text-ink-muted">
-                    Vídeo anotado, já borrado: caixa e número de cada dano, confiança e FPS na faixa de cima.
+                    Vídeo já borrado, com cada dano marcado.
                     {job.video_tipo === "video/mp4" && " Se não tocar aqui, baixe e abra num player."}
                   </figcaption>
                 </figure>
                 <div className="grid content-start gap-3">
                   <dl className="grid grid-cols-2 gap-2 text-sm">
                     {([
-                      ["Danos únicos", String(m?.danos_unicos ?? job.danos.length)],
-                      ["Novas ocorrências", String(job.resultado.novas_ocorrencias)],
-                      ["Juntadas a existentes", String(job.resultado.associadas_a_existentes)],
+                      ["Danos encontrados", String(m?.danos_unicos ?? job.danos.length)],
+                      ["Ocorrências novas", String(job.resultado.novas_ocorrencias)],
+                      ["Já estavam na fila", String(job.resultado.associadas_a_existentes)],
                       ["Possivelmente resolvidas", String(job.resultado.possivelmente_resolvidas)],
-                      ["FPS do processamento", m?.fps_processamento != null ? num(m.fps_processamento) : "—"],
-                      ["Detecção por quadro", m?.latencia_deteccao_ms ? `${num(m.latencia_deteccao_ms.media, 0)} ms` : "—"],
+                      ["Velocidade", m?.fps_processamento != null ? `${num(m.fps_processamento)} quadros/s` : "—"],
+                      ["Tempo por quadro", m?.latencia_deteccao_ms ? `${num(m.latencia_deteccao_ms.media, 0)} ms` : "—"],
                       ["Quadros analisados", String(job.quadros_processados)],
-                      ["Regiões borradas", String(m?.regioes_borradas ?? 0)],
+                      ["Rostos e placas borrados", String(m?.regioes_borradas ?? 0)],
                     ] as const).map(([r, v]) => (
-                      <div key={r} className="glass-card grid gap-0.5 rounded-card px-3 py-2">
+                      <div key={r} className="grid gap-0.5 border-t border-[var(--qr-linha,var(--border))] pt-2">
                         <dt className="text-xs text-ink-muted">{r}</dt>
                         <dd className="text-lg font-semibold tabular-nums">{v}</dd>
                       </div>
                     ))}
                   </dl>
                   <p className="text-xs text-ink-muted">
-                    {m?.tempo_real === "sim" ? "Mais rápido que o tempo real" : "Mais lento que o tempo real"} nesta máquina (CPU, YOLOv8n em ONNX, limiar {m?.limiar != null ? num(m.limiar, 2) : "—"}).
-                    Os danos já estão no mapa abaixo e nas filas, com origem Ônibus.
+                    {m?.tempo_real === "sim" ? "A análise foi mais rápida que o vídeo." : "A análise foi mais lenta que o vídeo."} Os danos já estão no mapa e nas filas.
                   </p>
                 </div>
               </div>
@@ -218,7 +224,7 @@ export function EnvioFrota({ aoConcluir }: { aoConcluir: (passagemId: string) =>
                   <table className="w-full text-left text-sm">
                     <caption className="sr-only">Danos encontrados neste envio</caption>
                     <thead className="text-xs text-ink-muted">
-                      <tr><th className="py-1 pr-3 font-semibold">Dano</th><th className="py-1 pr-3 font-semibold">Tipo</th><th className="py-1 pr-3 font-semibold">Confiança</th><th className="py-1 pr-3 font-semibold">Momento</th><th className="py-1 font-semibold">Quadros</th></tr>
+                      <tr><th className="py-1 pr-3 font-semibold">Dano</th><th className="py-1 pr-3 font-semibold">Tipo</th><th className="py-1 pr-3 font-semibold">Certeza</th><th className="py-1 pr-3 font-semibold">Momento</th><th className="py-1 font-semibold">Quadros</th></tr>
                     </thead>
                     <tbody>
                       {job.danos.slice(0, 12).map((d) => (

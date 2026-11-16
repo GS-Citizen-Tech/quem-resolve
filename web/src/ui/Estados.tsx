@@ -1,5 +1,5 @@
 // Estados de latência e vazio (design para latência, exigência 3.5).
-import { CircleCheck, Inbox, LoaderCircle } from "lucide-react";
+import { CircleCheck, LoaderCircle } from "lucide-react";
 
 /** Spinner com texto; com `etapas`, mostra a barra de etapas ("olhando a foto → …"). */
 export function Carregando({ texto, etapas, atual = 0 }: { texto: string; etapas?: string[]; atual?: number }) {
@@ -27,8 +27,7 @@ export function Carregando({ texto, etapas, atual = 0 }: { texto: string; etapas
 
 export function Vazio({ titulo, texto }: { titulo: string; texto?: string }) {
   return (
-    <div className="grid justify-items-center gap-2 rounded-card border-2 border-dashed border-line-strong px-6 py-8 text-center">
-      <Inbox aria-hidden="true" className="size-7 text-ink-muted" />
+    <div className="grid gap-1 py-4">
       <p className="font-semibold">{titulo}</p>
       {texto && <p className="text-ink-muted">{texto}</p>}
     </div>
