@@ -99,7 +99,7 @@ export function FluxoReportar() {
     let deteccoes: Deteccao[] = [];
     let avisoFoto: string | null = null;
     if (foto) {
-      try { deteccoes = (await api.detectarFoto(foto.arquivo)).deteccoes; }
+      try { deteccoes = (await api.detectarFoto(foto.arquivo, atual.descricao)).deteccoes; }
       catch { avisoFoto = "Usei só a sua descrição."; }
       setPasso(1);
     }

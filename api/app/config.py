@@ -29,6 +29,11 @@ VISAO_RESERVA = os.getenv("VISAO_RESERVA", "off")                    # off | moc
 VISAO_RESERVA_MODELO = os.getenv("VISAO_RESERVA_MODELO", "gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.8-flash")  # lista: tenta o próximo se um estiver sobrecarregado, lento ou sem cota. O lite vem 1º: no teste de 12/11 respondeu em 1,4 s, o flash travou e o 3.8 estava sobrecarregado
 VISAO_RESERVA_CHAVE = os.getenv("VISAO_RESERVA_CHAVE", "") or os.getenv("LLM_API_KEY", "")  # vazio = usa a chave do LLM
 VISAO_RESERVA_TIMEOUT = float(os.getenv("VISAO_RESERVA_TIMEOUT", "12"))  # total, somando os modelos da lista
+# Limiar por classe só na foto do cidadão (v1.4). D20 (couro de jacaré) confunde com piso de bloquinho/sextavado da calçada.
+YOLO_LIMIAR_CLASSE = {k.strip(): float(v) for k, v in (p.split("=") for p in os.getenv("YOLO_LIMIAR_CLASSE", "D20=0.75").split(",") if "=" in p)}
+# Calibração da confiança da análise (v1.4): o Gemini se dá nota alta demais; teto geral abaixo de 100%.
+LLM_TETO_CONFIANCA = float(os.getenv("LLM_TETO_CONFIANCA", "0.85"))
+TETO_CONFIANCA = float(os.getenv("TETO_CONFIANCA", "0.95"))
 
 # Endereço por extenso (v1.1): OpenStreetMap / Nominatim, grátis e sem chave. O User-Agent identifica o projeto (regra do Nominatim).
 GEO_URL = os.getenv("GEO_URL", "https://nominatim.openstreetmap.org")

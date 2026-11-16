@@ -251,9 +251,8 @@ export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (
         }}>
           <label htmlFor={`st-${o.id}`} className="text-base font-semibold">Mudar status</label>
           <div className="flex flex-wrap gap-2">
-            <Selecao id={`st-${o.id}`} value={status} onChange={(e) => setStatus(e.target.value as Status)} className="flex-1">
-              {(Object.keys(NOME_STATUS) as Status[]).map((s) => <option key={s} value={s}>{NOME_STATUS[s]}</option>)}
-            </Selecao>
+            <Selecao id={`st-${o.id}`} valor={status} aoMudar={(v) => setStatus(v as Status)} className="flex-1"
+              opcoes={(Object.keys(NOME_STATUS) as Status[]).map((s) => ({ valor: s, rotulo: NOME_STATUS[s] }))} />
             <button type="submit" aria-busy={salvando || undefined}
               className="inline-flex min-h-console cursor-pointer items-center gap-1.5 rounded-chip bg-primary px-3.5 text-sm font-semibold text-primary-foreground hover:bg-brand-hover">
               <Save aria-hidden="true" className="size-4" />Salvar status

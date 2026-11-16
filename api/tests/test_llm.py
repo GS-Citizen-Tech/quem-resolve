@@ -94,3 +94,27 @@ def test_pipeline_segue_sem_gemini(client, monkeypatch):
     monkeypatch.setattr(modulo, "_gemini", g)
     r = client.post("/reportes/analisar", json={"descricao": "Tem um buraco enorme na rua"})
     assert r.status_code == 200 and r.json()["categoria"]["id"] == "buraco" and r.json()["classificado_por"] == "regras"
+
+
+# ---------- v1.4: calibração da confiança ----------
+
+def test_confianca_nao_bate_99_e_foto_que_discorda_baixa(monkeypatch):
+    """16/11: com o Gemini a confiança dava 99% sempre (nota alta + bônus de concordância)."""
+    from app.pipelines import analise_reporte
+    from app.schemas.reporte import AnaliseLLM, ReporteEntrada
+    from app.schemas.visao import Deteccao
+
+    class Confiante:
+        def classificar(self, descricao, ids):
+            return AnaliseLLM(categoria_id="lixo_acumulado", confianca=0.99, explicacao="Lixo na via.")
+
+    monkeypatch.setattr(config, "LLM_PROVIDER", "gemini")
+    monkeypatch.setattr(analise_reporte, "obter_llm", lambda: Confiante())
+    so_texto = analise_reporte.analisar(ReporteEntrada(descricao="Tem lixo acumulado na calçada"))
+    assert so_texto.categoria.id == "lixo_acumulado" and so_texto.confianca <= config.TETO_CONFIANCA
+
+    jacare = Deteccao(classe="D20", categoria_id="buraco", confianca=0.8, bbox=(0.1, 0.1, 0.5, 0.5))
+    com_foto = analise_reporte.analisar(ReporteEntrada(descricao="Tem lixo acumulado na calçada", deteccoes_visao=[jacare]))
+    assert com_foto.categoria.id == "lixo_acumulado"
+    assert com_foto.confianca <= so_texto.confianca - 0.1
+    assert "buraco" in [c.id for c in com_foto.alternativas]

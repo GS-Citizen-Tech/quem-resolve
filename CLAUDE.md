@@ -25,7 +25,7 @@ Os módulos do parceiro entram na API trocando o mock pela implementação real,
 |---|---|
 | `docs/PRD.md` | PRD v0.4: problema, personas, requisitos, arquitetura, mapa disciplina → módulo, cronograma, decisões D01–D17 |
 | `docs/VISAO-GERAL-GS.md` | Resumo do que cada uma das 9 disciplinas exige |
-| `docs/CONTRATOS.md` | Contratos da API v1.3 (endpoints A a O, JSON de entrada e saída, dono de cada módulo) |
+| `docs/CONTRATOS.md` | Contratos da API v1.4 (endpoints A a O, JSON de entrada e saída, dono de cada módulo) |
 | `docs/PLANO-BANCO.md` | Banco v1.0: Supabase (Postgres + Storage), tabelas, visões, LGPD, resultado B1–B3. Guias: `SUPABASE-PASSO-A-PASSO.md` (Ian) e `BANCO-PARCEIRO.md` |
 | `docs/PLANO-UX-REPORTAR.md` | Nova tela inicial (bola de falar) e Reportar em cartões com endereço por extenso (v1.1, 15/11). Separado da F4 |
 | `docs/PLANO-FRONT.md` | Plano do front v0.3: telas, componentes, estado, falhas, acessibilidade, barema da disciplina 04, fases F0–F5, decisões |

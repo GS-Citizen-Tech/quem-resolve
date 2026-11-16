@@ -20,7 +20,7 @@ export function BarraTopo({ inicio = "/", direita, itens, rotulo, className = ""
 }) {
   const atual = usePathname();
   return (
-    <header className={`glass flex h-16 items-center justify-between gap-4 rounded-bar pr-3 pl-5 ${className}`}>
+    <header className={`glass relative z-30 flex h-16 items-center justify-between gap-4 rounded-bar pr-3 pl-5 ${className}`}>
       <Link href={inicio} className="rounded-chip"><Marca /></Link>
       {itens && (
         <nav aria-label={rotulo} className="hidden items-center gap-1 md:flex">

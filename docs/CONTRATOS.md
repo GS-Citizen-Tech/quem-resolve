@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **1.3** · 15/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **1.4** · 16/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -132,7 +132,7 @@ Saída:
 
 ## C. Visão computacional
 
-`POST /visao/detectar` · `multipart/form-data`, campo `foto` (JPG, PNG ou WEBP, até 8 MB)
+`POST /visao/detectar` · `multipart/form-data`, campo `foto` (JPG, PNG ou WEBP, até 8 MB) e, opcional (v1.4), `descricao` (o texto do cidadão, até 1000 caracteres)
 
 Saída:
 ```json
@@ -175,6 +175,11 @@ Saída:
 - `VISAO_RESERVA_MODELO` aceita uma lista (padrão `gemini-3.5-flash-lite,gemini-3.5-flash,gemini-3.8-flash`): com 429 (sem cota), 5xx ou demora tenta o próximo, dentro de 12 s no total (`VISAO_RESERVA_TIMEOUT`; cada modelo usa no máximo 60% do que sobra). O front espera até 25 s pelo `/visao/detectar`. No plano gratuito cada modelo aceita cerca de 20 pedidos por dia.
 - Se o multimodal não vê problema, ou falha (sem chave, timeout de 8 s, resposta inválida), volta `deteccoes = []` como antes.
 - A frota (`I`) nunca usa a reserva.
+
+**Foto do cidadão (v1.4).**
+- Limiar por classe só no cidadão: `YOLO_LIMIAR_CLASSE` (padrão `D20=0.75`). O "couro de jacaré" fraco era falso positivo comum no piso de bloquinho da calçada e impedia a reserva.
+- Com `descricao`, a reserva também entra quando o YOLO achou algo que **não bate** com as palavras-chave do texto (ex.: fissura na foto, "lixo" no texto). As detecções dos dois voltam juntas, da maior para a menor confiança. Sem `descricao`, tudo funciona como antes.
+- A reserva pede o raciocínio mínimo ao Gemini (mais rápida). Se o modelo não aceitar, repete sem essa configuração. Quando todos falham, o log lista o erro de cada modelo.
 
 ---
 
@@ -225,6 +230,12 @@ Saída estruturada do LLM (uso interno da API, validada com Pydantic):
 ```
 
 **LLM real (v1.2):** com `LLM_PROVIDER=gemini` a API manda **todo** relato ao Google Gemini (`app/providers/llm.py`, `GeminiLLM`), com instrução de sistema, a lista de categorias e `responseJsonSchema` (categoria presa aos ids da base + `"nenhum"`). A resposta é validada em `AnaliseLLM` (Pydantic): `categoria_id`, `confianca` 0–1, `explicacao` curta. Vence a maior confiança entre visão, regras e LLM; quando o LLM concorda, `classificado_por = "llm"` e a `explicacao` usa a frase dele. Falha, sem cota ou JSON fora do formato: segue com regras e visão (nunca derruba a análise). Com `mock`, o LLM só entra quando regras e visão não bastam. O formato de saída não mudou.
+
+**Calibração da confiança (v1.4).** Antes dava 99% em quase todo relato com o Gemini. Agora:
+- Nota do LLM limitada a `LLM_TETO_CONFIANCA` (0,85); palavras-chave a 0,8 (`0,6 + 0,1` por palavra).
+- Cada outra fonte que concorda soma 0,05.
+- Foto que aponta outra categoria (confiança ≥ 0,3) e nenhuma foto que confirme: tira 0,15, e a categoria da foto entra nas `alternativas`.
+- Teto geral `TETO_CONFIANCA` (0,95).
 
 ---
 
@@ -604,3 +615,4 @@ O console pinta cada distrito pelo número de problemas abertos e, ao escolher u
 | 1.1 | 15/11/2026 | Ian | Endereço (O): `GET /geo/endereco` e `GET /geo/buscar` com OpenStreetMap/Nominatim pela API. O campo "Rua ou ponto de referência" sai do app; o endereço do mapa vai no fim da descrição |
 | 1.2 | 15/11/2026 | Ian | Análise (D): LLM real com o Gemini (`LLM_PROVIDER=gemini`), JSON preso a esquema e validado em `AnaliseLLM`; lê todo relato e a explicação usa a frase dele. Formato da resposta não muda |
 | 1.3 | 15/11/2026 | Ian | Bairros (O.2): `GET /geo/distritos` e `/geo/distritos.geojson` (malha do IBGE, baixada pela API sozinha); dados de exemplo trocados sozinhos na subida (tabela `meta_app`); campo `distrito` em `Ocorrencia`; filtro `?distrito=` na lista e nas métricas; prioridade sobe mais um degrau com 6 reportes no grupo |
+| 1.4 | 16/11/2026 | Ian | Visão (C): campo opcional `descricao`, reserva também no conflito foto x texto, limiar por classe `D20=0.75` no cidadão, log por modelo. Análise (D): confiança calibrada (LLM até 0,85, regras até 0,8, +0,05 por concordância, −0,15 se a foto discorda, teto 0,95). Formato de saída igual |

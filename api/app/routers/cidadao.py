@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.pipelines import analise_reporte, guardrail
 from app.providers import repositorio
@@ -25,14 +25,14 @@ def nao_e_emergencia(nivel: int, tipo: str | None = None):
 
 
 @router.post("/visao/detectar", response_model=VisaoResultado)
-async def detectar(foto: UploadFile = File(...)):
+async def detectar(foto: UploadFile = File(...), descricao: str | None = Form(default=None, max_length=1000)):
     if foto.content_type not in TIPOS_IMAGEM:
         raise HTTPException(415, "Envie uma foto JPG, PNG ou WEBP.")
     dados = await foto.read()
     if len(dados) > MAX_IMAGEM:
         raise HTTPException(413, "A foto passa de 8 MB.")
     try:
-        r = detectar_cidadao(dados)
+        r = detectar_cidadao(dados, descricao)
     except ImagemInvalida:
         raise HTTPException(422, "Não consegui ler a foto. Tente tirar outra.")
     origem = "multimodal" if any(d.origem == "multimodal" for d in r.deteccoes) else ("yolo" if r.deteccoes else "nenhuma")

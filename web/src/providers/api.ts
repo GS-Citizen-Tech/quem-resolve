@@ -79,9 +79,10 @@ export const api = {
   responsaveis: () => comCache("responsaveis", () => req<Responsavel[]>("/responsaveis")),
 
   // C · visão · D · análise · B · guardrail
-  detectarFoto: (foto: File) => {
+  detectarFoto: (foto: File, descricao?: string) => {
     const fd = new FormData();
     fd.append("foto", foto);
+    if (descricao?.trim()) fd.append("descricao", descricao.trim().slice(0, 1000)); // v1.4: foto x texto discordam → reserva desempata
     return req<VisaoResultado>("/visao/detectar", { method: "POST", body: fd }, 25_000); // YOLO + reserva multimodal (até 12 s) + envio da foto
   },
   analisar: (e: ReporteEntrada) => req<AnaliseReporte>("/reportes/analisar", json(e)),

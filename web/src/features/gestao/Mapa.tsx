@@ -105,10 +105,8 @@ export function Mapa() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <label className="sr-only" htmlFor="ir-bairro">Ir para o bairro</label>
-            <Selecao id="ir-bairro" value={distrito ?? ""} onChange={(e) => escolherDistrito(e.target.value || null)} className="w-56">
-              <option value="">Ir para o bairro…</option>
-              {distritos.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
-            </Selecao>
+            <Selecao id="ir-bairro" valor={distrito ?? ""} aoMudar={(v) => escolherDistrito(v || null)} className="w-56"
+              rotuloVazio="Ir para o bairro…" opcoes={[{ valor: "", rotulo: "Toda a cidade" }, ...distritos.map((d) => ({ valor: d.id, rotulo: d.nome }))]} />
             <BotaoAtualizar atualizar={() => { atualizar(); if (!malha) recarregarMalha(); }} carregando={carregando} />
           </div>
         </div>

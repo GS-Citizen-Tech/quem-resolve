@@ -183,11 +183,11 @@ export function Assistente() {
 
       <form noValidate onSubmit={(e) => { e.preventDefault(); if (!enviando) perguntar(texto); }} className="grid gap-1.5">
         <label htmlFor="pergunta" className="text-[17px] font-semibold">Sua pergunta</label>
-        <div className={`flex items-center gap-1 rounded-control border-[1.5px] bg-surface-raised p-1 pl-4 ${erroCampo ? "border-2 border-danger" : "border-line-strong"}`}>
+        <div className={`flex items-center gap-1 rounded-control border-[1.5px] bg-surface-raised p-1 pl-4 has-[input:focus-visible]:outline-3 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring ${erroCampo ? "border-2 border-danger" : "border-line-strong"}`}>
           <input id="pergunta" value={texto} maxLength={1000} autoComplete="off" placeholder="Escreva aqui"
             aria-invalid={erroCampo ? true : undefined} aria-describedby={erroCampo ? "pergunta-erro" : undefined}
             onChange={(e) => { setTexto(e.target.value); if (erroCampo) setErroCampo(null); }}
-            className="min-h-toque min-w-0 flex-1 bg-transparent text-[17px] text-ink placeholder:text-ink-muted" />
+            className="min-h-toque min-w-0 flex-1 bg-transparent text-[17px] text-ink outline-none placeholder:text-ink-muted focus-visible:outline-none" />
           {!modoVoz && (
             <button type="button" onClick={() => setModoVoz(true)} aria-label="Falar a pergunta" title="Falar"
               className="grid size-12 shrink-0 cursor-pointer place-items-center rounded-full text-ink hover:bg-rail-active/55">

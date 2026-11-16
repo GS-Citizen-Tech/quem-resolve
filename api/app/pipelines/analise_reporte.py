@@ -43,7 +43,7 @@ def analisar(entrada: ReporteEntrada) -> AnaliseReporte:
     regras = _por_regras(entrada.descricao)
     if regras:
         cid, p = regras[0]
-        candidatos.append((cid, min(0.6 + 0.15 * p, 0.95), "regras"))
+        candidatos.append((cid, min(0.6 + 0.1 * p, 0.8), "regras"))  # v1.4: palavra-chave nunca passa do LLM (teto 0,85)
 
     # O LLM lê todo relato (entende frases que as palavras-chave não pegam, ex.: "o poste da minha rua está apagado").
     # Saída estruturada (AnaliseLLM); se falhar, seguem regras e visão (RNF06).
@@ -54,7 +54,8 @@ def analisar(entrada: ReporteEntrada) -> AnaliseReporte:
         try:
             llm = obter_llm().classificar(entrada.descricao, list(base.categorias()))
             if llm.categoria_id in base.categorias():
-                candidatos.append((llm.categoria_id, llm.confianca, "llm"))
+                # O Gemini se dá nota alta demais (0,9+ em quase tudo): teto para não virar sempre "99%".
+                candidatos.append((llm.categoria_id, min(llm.confianca, config.LLM_TETO_CONFIANCA), "llm"))
         except ErroLLM:
             pass  # sem IA, o cidadão escolhe a categoria manualmente se as regras também não acharem
 
@@ -67,16 +68,24 @@ def analisar(entrada: ReporteEntrada) -> AnaliseReporte:
             alternativas=list(base.categorias().values())[:6],
         )
 
-    # Vence a maior confiança. Se outra fonte concorda com ela (visão, regras ou LLM), a confiança sobe.
-    cid, conf, origem = max(candidatos, key=lambda c: c[1])
+    # Vence a maior confiança. Cada outra fonte que concorda soma 5 pontos; a foto que aponta outra coisa tira 15
+    # (v1.4). Nunca passa de TETO_CONFIANCA: a IA não tem 100% de certeza.
+    # No empate, vale o texto: é o que o cidadão disse.
+    cid, conf, origem = max(candidatos, key=lambda c: (c[1], c[2] != "visao"))
     concordam = [c for c in candidatos if c[0] == cid]
-    if len(concordam) > 1:
-        conf = min(conf + 0.1, 0.99)
+    conf += 0.05 * (len(concordam) - 1)
+    # Foto x texto: se o "outro lado" (foto quando venceu o texto, texto quando venceu a foto) aponta outra coisa
+    # e nada desse lado confirma, a confiança cai.
+    outro_lado = [c for c in candidatos if (c[2] == "visao") != (origem == "visao") and c[1] >= 0.3]
+    if outro_lado and not any(c[0] == cid for c in outro_lado):
+        conf -= 0.15
+    conf = max(0.0, min(conf, config.TETO_CONFIANCA))
     if any(c[2] == "llm" for c in concordam):
         origem = "llm" if origem == "regras" else origem  # a foto continua sendo a origem quando ela decidiu
 
     cat, resp = base.categoria(cid), base.responsavel_de(cid)
-    alternativas = [base.categoria(c) for c, _ in regras if c != cid][:3]
+    outras = [c for c, _ in regras] + [d.categoria_id for d in visao]
+    alternativas = [base.categoria(c) for c in dict.fromkeys(outras) if c and c != cid][:3]
     return AnaliseReporte(
         guardrail=g,
         categoria=cat,

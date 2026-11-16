@@ -33,10 +33,8 @@ export function FiltrosConsole({ mostrar = ["categoria", "responsavel", "origem"
         return (
           <div key={k} className="grid min-w-36 flex-1 gap-1 sm:flex-none">
             <label htmlFor={`${id}-${k}`} className="text-xs font-medium text-ink-muted">{ROTULO[k]}</label>
-            <Selecao id={`${id}-${k}`} value={atual} onChange={(e) => definir(k, e.target.value || (padrao ? "todos" : undefined))} className="w-full sm:w-48">
-              <option value={padrao ? "todos" : ""}>{k === "responsavel" ? "Todos os órgãos" : k === "status" ? "Todos os status" : k === "distrito" ? "Toda a cidade" : "Todas"}</option>
-              {opcoes[k].map((o) => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
-            </Selecao>
+            <Selecao id={`${id}-${k}`} valor={atual} aoMudar={(v) => definir(k, v || (padrao ? "todos" : undefined))} className="w-full sm:w-48"
+              opcoes={[{ valor: padrao ? "todos" : "", rotulo: k === "responsavel" ? "Todos os órgãos" : k === "status" ? "Todos os status" : k === "distrito" ? "Toda a cidade" : "Todas" }, ...opcoes[k]]} />
           </div>
         );
       })}

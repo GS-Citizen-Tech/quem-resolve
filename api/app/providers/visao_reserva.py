@@ -119,7 +119,7 @@ class GeminiReserva:
             ]}],
             "generationConfig": {
                 "temperature": 0,
-                "thinkingConfig": {"thinkingLevel": "low"},
+                "thinkingConfig": {"thinkingLevel": "minimal"},  # v1.4: sem raciocínio, a foto responde bem mais rápido
                 "responseMimeType": "application/json",
                 "responseJsonSchema": esquema,
             },
@@ -129,31 +129,37 @@ class GeminiReserva:
         import httpx
 
         corpo, fim = self._corpo(im), time.monotonic() + self.timeout
-        erro = None
+        erros: list[str] = []  # um por modelo, para o log mostrar a tentativa de cada um
         with httpx.Client(transport=self.transporte) as c:
             for i, modelo in enumerate(self.modelos):
                 resta = fim - time.monotonic()
                 if resta < 0.5:
+                    erros.append(f"{modelo} não tentou (tempo acabou)")
                     break
                 ultimo = i == len(self.modelos) - 1
                 limite = resta if ultimo else max(min(resta, 3.0), resta * 0.6)
                 t0 = time.monotonic()
                 try:
                     r = c.post(URL_GEMINI.format(modelo=modelo), json=corpo, headers={"x-goog-api-key": self.chave}, timeout=limite)
+                    if r.status_code == 400 and "thinking" in r.text.lower():
+                        # modelo que não aceita "minimal": tenta de novo sem a configuração de raciocínio
+                        sem = {**corpo, "generationConfig": {k: v for k, v in corpo["generationConfig"].items() if k != "thinkingConfig"}}
+                        r = c.post(URL_GEMINI.format(modelo=modelo), json=sem, headers={"x-goog-api-key": self.chave},
+                                   timeout=max(0.5, limite - (time.monotonic() - t0)))
                     if r.status_code == 429 or r.status_code >= 500:
-                        erro = f"{modelo} respondeu {r.status_code}"
+                        erros.append(f"{modelo} respondeu {r.status_code}")
                         continue  # sobrecarregado: tenta o próximo modelo da lista
                     r.raise_for_status()
                     partes = r.json()["candidates"][0]["content"]["parts"]
                     texto = "".join(p.get("text", "") for p in partes if not p.get("thought"))
                 except httpx.TimeoutException:
-                    erro = f"{modelo} não respondeu em {time.monotonic() - t0:.1f} s"
+                    erros.append(f"{modelo} não respondeu em {time.monotonic() - t0:.1f} s")
                     continue  # demorou: tenta o próximo modelo com o tempo que sobra
                 except (httpx.HTTPError, KeyError, IndexError, ValueError) as e:
                     raise ErroReserva(f"Reserva multimodal falhou ({modelo}): {e}") from e
                 self.nome = modelo
                 return interpretar(texto)
-        raise ErroReserva(f"Reserva multimodal indisponível: {erro or 'tempo esgotado'}")
+        raise ErroReserva(f"Reserva multimodal indisponível: {'; '.join(erros) or 'tempo esgotado'}")
 
 
 def obter_reserva() -> Reserva | None:

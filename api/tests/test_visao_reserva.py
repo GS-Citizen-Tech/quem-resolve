@@ -158,3 +158,61 @@ def test_modelo_lento_tenta_o_proximo_e_tudo_lento_avisa():
     g = GeminiReserva("gemini-lento-1, gemini-lento-2", "k", 10, transporte=httpx.MockTransport(tratar))
     with pytest.raises(ErroReserva, match="não respondeu"):
         g.classificar(Image.new("RGB", (64, 64)))
+
+
+# ---------- v1.4: conflito foto x texto, limiar por classe, log de cada modelo ----------
+
+def _det(classe, cat, conf):
+    from app.schemas.visao import Deteccao
+    return Deteccao(classe=classe, categoria_id=cat, confianca=conf, bbox=(0.1, 0.1, 0.5, 0.5))
+
+
+def _yolo_fixo(monkeypatch, deteccoes):
+    from app.schemas.visao import VisaoResultado
+    monkeypatch.setattr(config, "VISAO_PROVIDER", "mock")
+    monkeypatch.setattr(visao.MockVisao, "detectar", lambda self, img, limiar=None: VisaoResultado(
+        deteccoes=deteccoes, modelo="yolo-teste", latencia_ms=1.0))
+
+
+def test_jacare_fraco_e_filtrado_e_reserva_entra(monkeypatch):
+    """16/11: piso de bloquinho virou "couro de jacaré 68%" e bloqueou a reserva."""
+    _yolo_fixo(monkeypatch, [_det("D20", "buraco", 0.68)])
+    monkeypatch.setattr(config, "VISAO_RESERVA", "mock")
+    r = visao.detectar_cidadao(LISA)
+    assert [d.origem for d in r.deteccoes] == ["multimodal"]
+
+
+def test_foto_e_texto_discordam_chama_reserva_para_desempatar(monkeypatch):
+    _yolo_fixo(monkeypatch, [_det("D40", "buraco", 0.8)])
+    monkeypatch.setattr(config, "VISAO_RESERVA", "mock")
+    r = visao.detectar_cidadao(LISA, "tem muito entulho jogado na calçada")
+    assert {d.origem for d in r.deteccoes} == {"yolo", "multimodal"}
+    assert r.deteccoes[0].origem == "yolo"  # ordem por confiança
+    chamou = []
+    monkeypatch.setattr(visao_reserva.MockReserva, "classificar", lambda self, im: chamou.append(1) or [])
+    visao.detectar_cidadao(LISA, "buraco enorme no asfalto")  # texto e foto concordam: não gasta cota
+    assert not chamou
+
+
+def test_cada_modelo_aparece_no_erro():
+    def tratar(req: httpx.Request):
+        raise httpx.ReadTimeout("lento", request=req)
+    g = GeminiReserva("gemini-a, gemini-b", "k", 3, transporte=httpx.MockTransport(tratar))
+    with pytest.raises(ErroReserva) as e:
+        g.classificar(Image.new("RGB", (64, 64)))
+    assert "gemini-a" in str(e.value) and "gemini-b" in str(e.value)
+
+
+def test_modelo_sem_minimal_tenta_sem_raciocinio():
+    corpos = []
+
+    def tratar(req: httpx.Request):
+        corpo = json.loads(req.content)
+        corpos.append(corpo)
+        if "thinkingConfig" in corpo["generationConfig"]:
+            return httpx.Response(400, json={"error": {"message": "thinking level minimal is not supported"}})
+        texto = json.dumps({"categoria_id": "arvore", "confianca": 0.7, "descricao": "Galho caído"})
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": texto}]}}]})
+
+    [d] = GeminiReserva("gemini-x", "k", 3, transporte=httpx.MockTransport(tratar)).classificar(Image.new("RGB", (64, 64)))
+    assert d.categoria_id == "arvore" and len(corpos) == 2

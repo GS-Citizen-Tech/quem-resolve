@@ -180,16 +180,34 @@ def obter_visao() -> Visao:
     raise NotImplementedError(f"Provedor de visão '{config.VISAO_PROVIDER}' não existe (use mock ou yolo)")
 
 
-def detectar_cidadao(imagem: bytes) -> VisaoResultado:
-    """Foto do cidadão: YOLO primeiro; se ele não achar nada, a reserva multimodal (se ligada) olha a foto borrada.
+def _filtrar_cidadao(r: VisaoResultado) -> VisaoResultado:
+    """Limiar por classe só na foto do cidadão (v1.4): D20 (couro de jacaré) confunde com o piso de bloquinho da calçada."""
+    ok = [d for d in r.deteccoes if d.confianca >= config.YOLO_LIMIAR_CLASSE.get(d.classe, 0)]
+    return r if len(ok) == len(r.deteccoes) else r.model_copy(update={"deteccoes": ok})
+
+
+def _texto_discorda(deteccoes: list[Deteccao], descricao: str | None) -> bool:
+    """O texto aponta, pelas palavras-chave, para outra categoria que a foto não confirma (ex.: "lixo" x fissura)."""
+    if not descricao or not deteccoes:
+        return False
+    from app.pipelines.analise_reporte import _por_regras
+
+    regras = {cid for cid, _ in _por_regras(descricao)}
+    da_foto = {d.categoria_id for d in deteccoes if d.categoria_id}
+    return bool(regras) and not (regras & da_foto)
+
+
+def detectar_cidadao(imagem: bytes, descricao: str | None = None) -> VisaoResultado:
+    """Foto do cidadão: YOLO primeiro. A reserva multimodal (se ligada) olha a foto borrada quando o YOLO não acha
+    nada ou (v1.4) quando o que ele achou não bate com o texto do cidadão: ela desempata.
 
     A frota não passa por aqui: usa só o YOLO, com o limiar dela.
     """
     from app.providers.visao_reserva import ErroReserva, obter_reserva
 
     inicio = time.perf_counter()
-    resultado = obter_visao().detectar(imagem)
-    if resultado.deteccoes:
+    resultado = _filtrar_cidadao(obter_visao().detectar(imagem))
+    if resultado.deteccoes and not _texto_discorda(resultado.deteccoes, descricao):
         return resultado
     try:
         reserva = obter_reserva()
@@ -203,5 +221,6 @@ def detectar_cidadao(imagem: bytes) -> VisaoResultado:
         log.warning("%s", e)  # sem reserva o app segue como antes: só o texto do cidadão
         # latência real (YOLO + a espera pela reserva), para a tela de qualidade mostrar o custo da falha
         return resultado.model_copy(update={"latencia_ms": round((time.perf_counter() - inicio) * 1000, 1)})
-    return VisaoResultado(deteccoes=deteccoes, modelo=f"{resultado.modelo} + {reserva.nome}",
+    return VisaoResultado(deteccoes=sorted([*resultado.deteccoes, *deteccoes], key=lambda d: -d.confianca),
+                          modelo=f"{resultado.modelo} + {reserva.nome}",
                           latencia_ms=round((time.perf_counter() - inicio) * 1000, 1))
