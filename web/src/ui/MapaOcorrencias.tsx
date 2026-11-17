@@ -61,8 +61,12 @@ function iconePino(l: L) {
 
 // ---------- Componente ----------
 
-export function MapaOcorrencias({ pontos = [], trajetos = [], areas, selecionado, aoSelecionar, pino, centro, rotulo, altura = 420 }: {
+export function MapaOcorrencias({ pontos = [], trajetos = [], foco, areas, selecionado, seguir = true, aoSelecionar, pino, centro, rotulo, altura = 420 }: {
+  /** false: o ponto escolhido só cresce, o mapa não voa até ele (ex.: passar o mouse numa linha da lista). */
+  seguir?: boolean;
   areas?: AreasMapa;
+  /** Trecho em destaque (ex.: a linha de ônibus escolhida): o mapa dá zoom nele e desenha a linha mais grossa, com contorno. */
+  foco?: [number, number][];
   pontos?: PontoMapa[];
   trajetos?: TrajetoMapa[];
   selecionado?: string | null;
@@ -86,8 +90,8 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], areas, selecionado
   const [estado, setEstado] = useState<"carregando" | "pronto" | "falhou">("carregando");
   const [semFundo, setSemFundo] = useState(false);
   const [tema, setTema] = useState(0);
-  const cb = useRef({ aoSelecionar, pino, centro, areas });
-  useEffect(() => { cb.current = { aoSelecionar, pino, centro, areas }; });
+  const cb = useRef({ aoSelecionar, pino, centro, areas, selecionado });
+  useEffect(() => { cb.current = { aoSelecionar, pino, centro, areas, selecionado }; });
 
   // Cria o mapa uma vez (o Leaflet só roda no navegador, por isso o import dinâmico).
   useEffect(() => {
@@ -129,9 +133,11 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], areas, selecionado
     marcadores.current.clear();
     const todos: Leaflet.LatLngExpression[] = [];
     const corLinha = lerCor("--chart-1");
+    const destaque = !!foco?.length;
     for (const t of trajetos) {
       todos.push(...t.pontos);
-      l.polyline(t.pontos, { color: corLinha, weight: 5, opacity: 0.85 }).addTo(g);
+      if (destaque) l.polyline(t.pontos, { color: lerCor("--qr-surface-raised") || "#fff", weight: 11, opacity: 0.95, interactive: false }).addTo(g); // contorno
+      l.polyline(t.pontos, { color: corLinha, weight: destaque ? 6 : 5, opacity: destaque ? 1 : 0.85 }).addTo(g);
     }
     for (const p of pontos) {
       todos.push([p.lat, p.lon]);
@@ -141,13 +147,18 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], areas, selecionado
       mk.addTo(g);
       marcadores.current.set(p.id, mk);
     }
-    if (!pino && !cb.current.centro && !cb.current.areas && todos.length) {
+    if (destaque) {
+      // Linha escolhida: zoom na linha inteira (com animação, menos para quem pede menos movimento).
+      const calmo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      m.flyToBounds(l.latLngBounds(foco), { padding: [48, 48], maxZoom: 16, animate: !calmo, duration: 0.6 });
+    } else if (!pino && !cb.current.centro && !cb.current.areas && todos.length) {
       m.fitBounds(l.latLngBounds(todos), { padding: [40, 40], maxZoom: todos.length === 1 ? 16 : 17 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estado, pontos, trajetos, tema]);
+  }, [estado, pontos, trajetos, foco, tema]);
 
-  // Ponto escolhido: aumenta e centraliza.
+  // Ponto escolhido: aumenta e centraliza. Roda de novo quando os pontos chegam (link "Ver no mapa" abre antes dos dados).
+  const temSelecionado = !!selecionado && pontos.some((p) => p.id === selecionado);
   useEffect(() => {
     const l = lib.current;
     if (estado !== "pronto" || !l) return;
@@ -156,10 +167,15 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], areas, selecionado
       mk?.setIcon(icone(l, p.origem, p.tom, p.id === selecionado, p.quantidade));
       mk?.setZIndexOffset(p.id === selecionado ? 1000 : (p.quantidade ?? 1) * 10);
     }
+    // Vai até o ponto e chega perto (no mapa da cidade inteira, só centralizar não mostrava qual foi o escolhido).
     const sel = pontos.find((p) => p.id === selecionado);
-    if (sel) mapa.current?.panTo([sel.lat, sel.lon]);
+    const m = mapa.current;
+    if (sel && m && seguir) {
+      const calmo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      m.flyTo([sel.lat, sel.lon], Math.max(m.getZoom(), 16), { animate: !calmo, duration: 0.6 });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selecionado, estado]);
+  }, [selecionado, estado, temSelecionado]);
 
   // Pino arrastável ("Ajustar no mapa").
   useEffect(() => {
@@ -212,6 +228,8 @@ export function MapaOcorrencias({ pontos = [], trajetos = [], areas, selecionado
     const chaveVista = areaSel ?? "";
     if (ultimaVista.current !== chaveVista) {
       ultimaVista.current = chaveVista;
+      // Chegou com um ponto já escolhido (ex.: "Ver no mapa" da fila): fica nele, não volta para a cidade inteira.
+      if (!areaSel && cb.current.selecionado) return;
       const achadas: Leaflet.Polygon[] = [];
       g.eachLayer((x) => { if ((x as Leaflet.Polygon & { feature?: import("geojson").Feature }).feature?.properties?.id === areaSel) achadas.push(x as Leaflet.Polygon); });
       const limites = achadas[0] ? achadas[0].getBounds() : g.getBounds();

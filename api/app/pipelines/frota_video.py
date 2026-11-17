@@ -27,12 +27,14 @@ from PIL import Image
 
 from app.providers.privacidade import Borrador
 from app.providers.visao import YoloVisao
+from app.providers import linhas_onibus
 
 NOMES = {"D00": "fissura long.", "D10": "fissura transv.", "D20": "fissura malha", "D40": "buraco"}
 CORES = {"D00": (222, 134, 46), "D10": (132, 172, 16), "D20": (18, 156, 243), "D40": (60, 76, 231)}  # BGR
 EXT_FOTO = {".jpg", ".jpeg", ".png", ".webp"}
-# Trajeto simulado quando não há GPX: Av. Paulista, do Paraíso à Consolação (~2,7 km)
-TRAJETO_SIMULADO = [(-23.5710, -46.6448), (-23.5672, -46.6489), (-23.5631, -46.6544), (-23.5587, -46.6597), (-23.5555, -46.6625)]
+# Trajeto quando não há GPX (v1.5): traçado real da linha 875A-10 (GTFS SPTrans) na Av. Paulista, do Paraíso à
+# Consolação (~2,5 km), em 25 pontos igualmente espaçados: o ônibus "anda" em velocidade constante pelo vídeo.
+TRAJETO_SIMULADO = linhas_onibus.reamostrar(linhas_onibus.pontos(linhas_onibus.LINHA_VIDEO), 25)
 
 
 class ErroEntrada(ValueError):
@@ -264,7 +266,7 @@ class Opcoes:
     largura: int = 1280           # reduz quadros maiores para esta largura (0 = não reduz)
     limiar: float | None = None   # None = limiar da frota do modelo (0,35)
     min_vistos: int = 2           # vídeo: dano precisa aparecer em N quadros para contar
-    linha: str = "8000-10"
+    linha: str = linhas_onibus.LINHA_VIDEO
     gpx: Path | None = None
     inicio: datetime | None = None
     deslocamento_gps: float = 0.0

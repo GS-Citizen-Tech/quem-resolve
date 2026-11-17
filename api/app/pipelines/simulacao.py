@@ -3,7 +3,7 @@ import random
 from datetime import datetime, timedelta, timezone
 
 from app.pipelines import ocorrencias
-from app.providers import base_conhecimento as base, repositorio
+from app.providers import base_conhecimento as base, linhas_onibus, repositorio
 from app.schemas.base import Localizacao
 from app.schemas.ocorrencia import OcorrenciaCriar
 
@@ -20,7 +20,7 @@ BAIRROS = {
 # Pontos quentes (v1.3): o mesmo problema, no mesmo lugar, reportado por várias pessoas (e às vezes pelo ônibus).
 # No mapa do console viram bolas grandes; a prioridade sobe com 3 reportes ou mais.
 PONTOS_QUENTES = [
-    ("Itaquera", (-23.5455, -46.4570), "buraco", 8),  # fora da linha 3789-10 da frota
+    ("Itaquera", (-23.5455, -46.4570), "buraco", 8),  # ~400 m da linha 3789-10 da frota: não vira "possivelmente resolvida"
     ("Grajaú", (-23.7560, -46.6900), "lixo_acumulado", 6),
     ("Sé", (-23.5503, -46.6339), "descarte_irregular", 6),
     ("Santana", (-23.5020, -46.6250), "boca_de_lobo", 7),
@@ -39,11 +39,12 @@ PONTOS_QUENTES = [
 PESOS = {"buraco": 9, "lixo_acumulado": 8, "descarte_irregular": 7, "iluminacao": 6, "calcada": 5, "boca_de_lobo": 5,
          "arvore": 4, "fio_telecom": 4, "coleta_lixo": 4, "vazamento_agua": 3, "semaforo": 3, "esgoto": 2,
          "poste": 2, "lixeira": 2, "varricao": 2, "veiculo_abandonado": 2, "alagamento": 2, "fio_energia": 1}
-FROTA_ACHA = ("buraco", "lixo_acumulado", "boca_de_lobo", "descarte_irregular")
 
 
 def _registrar(rnd: random.Random, bairro: str, lat: float, lon: float, cid: str, agora: datetime) -> None:
-    origem = "frota" if cid in FROTA_ACHA and rnd.random() < 0.35 else "cidadao"
+    # Reportes soltos são sempre do cidadão (v1.6). O que é "ônibus" ou "ambos" sai só das passagens de gerar_frota,
+    # assim a Visão geral e a tela Frota contam a mesma coisa (e o ônibus só vê dano no asfalto).
+    origem = "cidadao"
     sugerida = cid if rnd.random() > 0.12 else rnd.choice(list(PESOS))
     ocorrencias.registrar(
         OcorrenciaCriar(
@@ -78,7 +79,7 @@ def gerar(n: int, seed: int = 42) -> int:
     return feitas
 
 
-VERSAO = "1.3.2"  # sobe quando os dados de exemplo mudam: a API troca os antigos sozinha na próxima subida
+VERSAO = "1.6.0"  # sobe quando os dados de exemplo mudam: a API troca os antigos sozinha na próxima subida
 
 
 def atualizar_se_preciso(n: int) -> str | None:
@@ -96,21 +97,35 @@ def atualizar_se_preciso(n: int) -> str | None:
     return f"dados de exemplo v{VERSAO}: {apagadas} antigos trocados por {n} novos (com pontos quentes); {len(reais_o)} reais mantidos"
 
 
-def _linha(a: tuple[float, float], b: tuple[float, float], n: int = 25) -> list[tuple[float, float]]:
-    return [(round(a[0] + (b[0] - a[0]) * i / (n - 1), 6), round(a[1] + (b[1] - a[1]) * i / (n - 1), 6)) for i in range(n)]
+# Passagens extras (v1.6): uma linha real em cada região, com 3 a 5 danos no asfalto ao longo do trecho.
+# (código da linha, dias atrás, nº de danos, a 2ª passagem já perdeu um dano?, um cidadão já tinha reportado um deles?)
+LINHAS_EXTRAS = [
+    ("2290-10", 1, 4, False, True),   # São Mateus
+    ("9181-10", 2, 5, False, False),  # Brasilândia
+    ("6826-10", 3, 4, True, False),   # Capão Redondo
+    ("1757-10", 1, 3, False, True),   # Santana
+    ("2716-10", 4, 4, False, False),  # Penha
+    ("695X-10", 5, 3, False, False),  # Jabaquara
+    ("7411-10", 2, 5, True, True),    # Butantã
+    ("513L-10", 6, 3, False, False),  # Mooca
+    ("4025-10", 3, 4, False, False),  # Vila Prudente
+]
+CLASSES = [("D40", 0.55, 0.82), ("D00", 0.4, 0.7), ("D10", 0.4, 0.68), ("D20", 0.45, 0.75)]  # (classe, conf. mín., máx.)
 
 
 def gerar_frota() -> int:
-    """3 passagens de ônibus de exemplo (v0.8), para a tela da frota abrir com dados e mostrar as regras:
+    """Passagens de ônibus de exemplo, para a tela da frota abrir com dados e mostrar as regras:
     - a 1ª passagem da linha 3789-10 encontra 3 danos (um deles já reportado por um cidadão → vira "ambos");
     - a 2ª passagem, hoje, só vê 2 deles → o 3º vira "possivelmente resolvida";
-    - a linha 8000-10 (Penha) mostra outro trajeto."""
+    - a linha 8000-10 (Lapa → centro) mostra outro trajeto.
+    - v1.6: mais 9 linhas reais pela cidade (LINHAS_EXTRAS), algumas com 2 passagens e reporte de cidadão junto.
+    Os caminhos são o traçado real das linhas no GTFS da SPTrans (v1.5); os danos continuam simulados."""
     from app.pipelines import frota  # import local: frota importa ocorrencias, que já está carregado
     from app.schemas.frota import DeteccaoFrota, PassagemFrota
     from app.schemas.visao import Deteccao
 
     agora = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-    itaquera = _linha((-23.5402, -46.4705), (-23.5398, -46.4405))
+    itaquera = linhas_onibus.reamostrar(linhas_onibus.pontos("3789-10"), 25)
     danos = [(itaquera[5], "D40", 0.71), (itaquera[12], "D00", 0.55), (itaquera[19], "D20", 0.62)]
 
     # Dona Cida reportou o primeiro buraco antes de o ônibus passar.
@@ -130,6 +145,29 @@ def gerar_frota() -> int:
 
     frota.ingerir(passagem("3789-10", itaquera, agora - timedelta(days=2, hours=5), danos, 7.4))
     frota.ingerir(passagem("3789-10", itaquera, agora - timedelta(hours=3), danos[:2], 6.9))
-    penha = _linha((-23.5262, -46.5520), (-23.5228, -46.5290))
-    frota.ingerir(passagem("8000-10", penha, agora - timedelta(days=1, hours=2), [(penha[8], "D40", 0.66), (penha[17], "D10", 0.48)], 8.1))
-    return 3
+    lapa = linhas_onibus.reamostrar(linhas_onibus.pontos("8000-10"), 40)
+    frota.ingerir(passagem("8000-10", lapa, agora - timedelta(days=1, hours=2), [(lapa[13], "D40", 0.66), (lapa[27], "D10", 0.48)], 8.1))
+
+    rnd = random.Random(7)
+    feitas = 3
+    for codigo, dias, n, perdeu, cidadao in LINHAS_EXTRAS:
+        trajeto = linhas_onibus.reamostrar(linhas_onibus.pontos(codigo), 40)
+        lugares = sorted(rnd.sample(range(3, 37), n))
+        achados = []
+        for k in lugares:
+            cl, lo, hi = rnd.choice(CLASSES)
+            achados.append((trajeto[k], cl, round(rnd.uniform(lo, hi), 2)))
+        inicio = agora - timedelta(days=dias, hours=rnd.randint(1, 10))
+        if cidadao:  # alguém já tinha reportado o 1º dano: vira "Os dois" no mapa
+            pt = achados[0][0]
+            ocorrencias.registrar(OcorrenciaCriar(
+                descricao=f"Buraco na rua em {linhas_onibus.linha(codigo).get('bairro', 'São Paulo')} (simulado)",
+                localizacao=Localizacao(lat=pt[0] + 0.0001, lon=pt[1]),
+                categoria_sugerida="buraco", confianca=0.86, categoria_final="buraco"),
+                origem="cidadao", criada_em=inicio - timedelta(days=1))
+        frota.ingerir(passagem(codigo, trajeto, inicio, achados, round(rnd.uniform(6.5, 8.4), 1)))
+        feitas += 1
+        if perdeu:  # passou de novo hoje e não viu o último → "possivelmente resolvida"
+            frota.ingerir(passagem(codigo, trajeto, agora - timedelta(hours=rnd.randint(1, 5)), achados[:-1], round(rnd.uniform(6.5, 8.4), 1)))
+            feitas += 1
+    return feitas

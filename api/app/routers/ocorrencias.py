@@ -105,4 +105,4 @@ def atualizar_status(oid: str, dados: AtualizarStatus, quem: dict = Depends(exig
         repositorio.salvar_ocorrencia(o)
         for campo, de, para in mudou:
             repositorio.registrar_historico(o.id, quem["u"], campo, de, para, dados.observacao)
-    return armazenamento.com_links([o])[0]
+    return armazenamento.com_links([ocorrencias.com_distrito(o)])[0]  # com o bairro, como no GET

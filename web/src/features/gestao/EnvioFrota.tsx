@@ -33,7 +33,7 @@ function conferir(arquivos: File[]): string | null {
 /** `aberto`: mostra o formulário e o último resultado. Fechado, só aparece enquanto um envio está sendo processado. */
 export function EnvioFrota({ aoConcluir, aberto, fechar }: { aoConcluir: (passagemId: string) => void; aberto: boolean; fechar: () => void }) {
   const [arquivos, setArquivos] = useState<File[]>([]);
-  const [linha, setLinha] = useState("8000-10");
+  const [linha, setLinha] = useState("875A-10");
   const [gpx, setGpx] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -87,7 +87,7 @@ export function EnvioFrota({ aoConcluir, aberto, fechar }: { aoConcluir: (passag
   };
 
   const enviar = async () => {
-    const problema = conferir(arquivos) ?? (linha.trim() ? null : "Informe a linha do ônibus (ex.: 8000-10).");
+    const problema = conferir(arquivos) ?? (linha.trim() ? null : "Informe a linha do ônibus (ex.: 875A-10).");
     if (problema) return setErro(problema);
     setErro(null);
     setEnviando(true);

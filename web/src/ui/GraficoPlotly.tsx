@@ -130,3 +130,80 @@ export function GraficoPlotly({ titulo, dados: todos, horizontal = true, unidade
     </figure>
   );
 }
+
+// ---------- Barras empilhadas por dia (Visão geral, 17/11) ----------
+
+export interface Serie { nome: string; cor: string; valores: number[] }
+
+/** Colunas por dia, empilhadas por série (ex.: prioridade alta, média, baixa). `cor` = variável CSS (ex.: "--qr-danger").
+ *  A legenda é escrita (nome de cada série), então a cor não fica sozinha; e tem a mesma informação em tabela. */
+export function GraficoDias({ titulo, dias, series, descricao }: { titulo: string; dias: string[]; series: Serie[]; descricao?: string }) {
+  const id = useId();
+  const ref = useRef<HTMLDivElement>(null);
+  const tema = useVersaoTema();
+  const [falhou, setFalhou] = useState(false);
+  const totais = series.map((s) => s.valores.reduce((a, b) => a + b, 0));
+  const resumo = `${titulo}. ${series.map((s, i) => `${s.nome}: ${totais[i]}`).join("; ")} em ${dias.length} dias.`;
+
+  useEffect(() => {
+    const div = ref.current;
+    if (!div || !dias.length) return;
+    let vivo = true;
+    import("plotly.js-dist-min").then(({ default: Plotly }) => {
+      if (!vivo) return;
+      const tinta = lerCor("--qr-ink");
+      const apagada = lerCor("--qr-ink-muted");
+      const fonte = getComputedStyle(document.body).fontFamily;
+      Plotly.react(div, series.map((s) => ({
+        type: "bar", name: s.nome, x: dias, y: s.valores, marker: { color: lerCor(s.cor) },
+        hovertemplate: `%{x}: %{y} ${s.nome.toLowerCase()}<extra></extra>`,
+      })), {
+        barmode: "stack", height: 230, bargap: 0.35,
+        margin: { l: 28, r: 8, t: 30, b: 28 },
+        paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+        font: { family: fonte, size: 12, color: tinta },
+        showlegend: true, legend: { orientation: "h", x: 0, y: 1.02, yanchor: "bottom", font: { size: 12, color: tinta }, traceorder: "normal" },
+        xaxis: { fixedrange: true, showgrid: false, tickfont: { size: 11, color: apagada }, nticks: 8, showline: false, ticks: "" },
+        yaxis: { fixedrange: true, gridcolor: lerCor("--border") || "rgba(0,0,0,0.08)", zeroline: false, tickfont: { size: 11, color: apagada }, rangemode: "tozero" },
+        hoverlabel: { font: { family: fonte, size: 13 } },
+      }, { displayModeBar: false, responsive: true });
+    }).catch(() => vivo && setFalhou(true));
+    return () => { vivo = false; };
+  }, [dias, series, tema]);
+
+  useEffect(() => {
+    const div = ref.current;
+    return () => { if (div) import("plotly.js-dist-min").then(({ default: P }) => P.purge(div)).catch(() => {}); };
+  }, []);
+
+  return (
+    <figure className="grid gap-2" aria-labelledby={`${id}-t`}>
+      <figcaption id={`${id}-t`} className="text-[15px] font-semibold">{titulo}</figcaption>
+      {descricao && <p className="text-xs text-ink-muted">{descricao}</p>}
+      {falhou ? <p className="text-sm text-ink-muted">Não deu para desenhar o gráfico. Os números estão na tabela abaixo.</p>
+        : <div ref={ref} role="img" aria-label={resumo} style={{ minHeight: 230 }} />}
+      <details className="group" open={falhou || undefined}>
+        <summary className="inline-flex min-h-console cursor-pointer list-none items-center rounded-chip text-[13px] font-medium text-ink-muted underline underline-offset-4 hover:text-ink [&::-webkit-details-marker]:hidden">
+          <span className="group-open:hidden">Ver como tabela</span><span className="hidden group-open:inline">Esconder tabela</span>
+        </summary>
+        <div className="mt-2 max-h-64 overflow-y-auto">
+          <table className="w-full text-sm">
+            <caption className="sr-only">{titulo}</caption>
+            <thead><tr className="border-b border-line-strong text-left text-ink-muted">
+              <th scope="col" className="py-1.5 font-semibold">Dia</th>
+              {series.map((s) => <th key={s.nome} scope="col" className="py-1.5 text-right font-semibold">{s.nome}</th>)}
+            </tr></thead>
+            <tbody>
+              {dias.map((d, i) => (
+                <tr key={d} className="border-b border-border">
+                  <th scope="row" className="py-1.5 text-left font-normal tabular-nums">{d}</th>
+                  {series.map((s) => <td key={s.nome} className="py-1.5 text-right tabular-nums">{s.valores[i]}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </figure>
+  );
+}

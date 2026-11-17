@@ -161,7 +161,25 @@ export function TabelaFila({ ocorrencias, abrir, titulo = "Ocorrências" }: { oc
 type Retorno = { tipo: "ok" | "danger"; titulo: string; texto: string } | null;
 
 /** `aplicar` troca as ocorrências mostradas (usado para a mudança otimista e para desfazer). */
-export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (o: Ocorrencia[]) => void }) {
+/** Por que a prioridade ficou assim, em palavras (a mesma regra da API: app/pipelines/ocorrencias._prioridade). */
+export function porquePrioridade(o: Ocorrencia, reportes: number, emergencia: string | undefined): string {
+  const motivos: string[] = [];
+  if (emergencia === "sim") motivos.push("é um risco à segurança");
+  else if (emergencia === "depende") motivos.push("pode virar risco");
+  if (reportes >= 6) motivos.push(`${reportes} pessoas reportaram`);
+  else if (reportes >= 3) motivos.push(`${reportes} reportes no mesmo lugar`);
+  if (o.origem === "ambos") motivos.push("cidadão e ônibus viram o mesmo problema");
+  const nome = o.prioridade >= 4 ? "Alta" : o.prioridade === 3 ? "Média" : "Baixa";
+  if (!motivos.length) return `${nome}: sem risco à segurança e poucos reportes.`;
+  const lista = motivos.length === 1 ? motivos[0] : `${motivos.slice(0, -1).join(", ")} e ${motivos[motivos.length - 1]}`;
+  return `${nome} porque ${lista}.`;
+}
+
+export function DetalheOcorrencia({ grupo, aplicar, empilhado = false }: {
+  grupo: Grupo; aplicar: (o: Ocorrencia[]) => void;
+  /** Uma coluna só (dentro da gaveta da Visão geral). */
+  empilhado?: boolean;
+}) {
   const { principal: o, itens } = grupo;
   const { estado } = useAppState();
   const { categorias, responsaveis, nomeCategoria, nomeOrgao } = useBase();
@@ -208,12 +226,15 @@ export function DetalheOcorrencia({ grupo, aplicar }: { grupo: Grupo; aplicar: (
   const vezes = itens.length > 1 ? ` (nos ${itens.length} reportes juntos)` : "";
 
   return (
-    <div className="grid gap-6 rounded-card border border-[var(--qr-linha,var(--border))] bg-surface-raised p-4 lg:grid-cols-2">
+    <div className={empilhado ? "grid gap-6" : "grid gap-6 rounded-card border border-[var(--qr-linha,var(--border))] bg-surface-raised p-4 lg:grid-cols-2"}>
       <div className="grid content-start gap-3">
         {!meuOrgao && (
           <Aviso tipo="info" titulo={`Fila de ${nomeOrgao(o.responsavel_id)}`}>Você pode ver esta ocorrência, mas só quem é desse órgão altera.</Aviso>
         )}
         <dl className="grid gap-2 text-sm">
+          <div><dt className="text-xs text-ink-muted">Prioridade</dt>
+            <dd className="flex flex-wrap items-center gap-2 pt-0.5"><SeloPrioridade valor={o.prioridade} curto />
+              <span>{porquePrioridade(o, itens.length, categorias.find((c) => c.id === o.categoria_final)?.emergencia)}</span></dd></div>
           <div><dt className="text-xs text-ink-muted">O que foi relatado</dt><dd className="text-base">“{o.descricao || "Sem descrição (detecção do ônibus)"}”</dd></div>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <div><dt className="text-xs text-ink-muted">Recebida</dt><dd>{dataCurta(o.criada_em)}</dd></div>

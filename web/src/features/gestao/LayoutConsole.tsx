@@ -34,8 +34,9 @@ export function LayoutConsole({ children }: { children: ReactNode }) {
   }, [precisaEntrar, router]);
 
   if (naEntrada) {
+    // Tela de entrar fica fora do .console: mostra a foto da Paulista com vidro, igual ao app do cidadão.
     return (
-      <div className="console">
+      <div>
         <div className="mx-auto flex min-h-svh max-w-6xl flex-col gap-4 p-4">
           <BarraTopo inicio="/" direita={<SeletorTema />} />
           <main id="conteudo" className="flex-1">{children}</main>

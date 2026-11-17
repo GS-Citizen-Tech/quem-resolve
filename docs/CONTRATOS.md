@@ -1,6 +1,6 @@
 # Contratos da API: Quem Resolve?
 
-> Versão **1.4** · 16/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
+> Versão **1.5.1** · 17/11/2026 · Ian · **Aguardando revisão do parceiro** (RAG, voz e RPA são dele).
 
 Este documento define o que cada módulo **recebe** e **devolve**. O objetivo é que cada pessoa trabalhe sozinha na sua matéria e tudo se encaixe no fim:
 
@@ -422,7 +422,7 @@ Saída:
 - `fps_processamento` alimenta o relatório de VC. A carga (N ônibus × vídeo) é a mesma simulada no iSPD (Cluster).
 - `GET /frota/passagens` → lista das passagens para o mapa de cobertura.
 - **Possivelmente resolvida (v0.8):** antes de gravar as detecções, a API olha as ocorrências abertas (`pendente_envio` ou `enviada`) de categorias que a visão detecta, criadas antes do início da passagem. Se o trajeto passou a até **25 m** dela e **nenhuma** detecção da mesma categoria caiu a até 25 m, o status vira `possivelmente_resolvida`. A saída ganha `"possivelmente_resolvidas": 1`.
-- Na simulação (`SEED > 0`), a API cria 3 passagens de exemplo (linhas 3789-10 e 8000-10) para o console não abrir vazio.
+- Na simulação (`SEED > 0`), a API cria 14 passagens de exemplo em 11 linhas (3789-10, 8000-10 e, desde a v1.5.1, mais 9 linhas pela cidade) para o console não abrir vazio. Ocorrências com origem `frota` ou `ambos` só saem dessas passagens (os reportes soltos simulados são todos do cidadão), e a frota só encontra dano no asfalto (`buraco`). Desde a v1.5 o **trajeto é o traçado real** dessas linhas, tirado do GTFS oficial da SPTrans (`shapes.txt`) e guardado simplificado em `api/app/data/linhas_onibus.json` (3789-10: últimos 4 km até o Metrô Itaquera; 8000-10: Term. Lapa → Pça. Ramos de Azevedo). Os danos e as passagens continuam simulados.
 
 ### I.2 Processar vídeo ou fotos pelo console (v1.0)
 
@@ -430,7 +430,7 @@ O gestor envia, na tela **Frota**, um vídeo curto ou uma sequência de fotos. A
 
 `POST /frota/processamentos` → `202` · `multipart/form-data`
 - `arquivos`: **1 vídeo** (MP4, MOV, WebM, M4V, AVI, MKV; até 80 MB, `FROTA_MAX_MB`) **ou** até 60 fotos (JPG, PNG, WebP; 8 MB cada), na ordem da sequência. Misturar vídeo e foto → `422`.
-- `linha_onibus` (texto, padrão `8000-10`) e `gpx` (opcional; sem ele, trajeto simulado na Av. Paulista).
+- `linha_onibus` (texto, padrão `875A-10`) e `gpx` (opcional; sem ele, o vídeo segue o traçado real da linha 875A-10 na Av. Paulista, do GTFS da SPTrans).
 - Vídeo: analisa 3 quadros por segundo, só os primeiros **60 s** (`FROTA_MAX_SEGUNDOS`; o resto é ignorado e a resposta avisa). Fotos: 2 fotos = 1 s.
 - Uma fila, um por vez. Com 3 na fila → `429`. Arquivo maior que o limite → `413`.
 
@@ -616,3 +616,5 @@ O console pinta cada distrito pelo número de problemas abertos e, ao escolher u
 | 1.2 | 15/11/2026 | Ian | Análise (D): LLM real com o Gemini (`LLM_PROVIDER=gemini`), JSON preso a esquema e validado em `AnaliseLLM`; lê todo relato e a explicação usa a frase dele. Formato da resposta não muda |
 | 1.3 | 15/11/2026 | Ian | Bairros (O.2): `GET /geo/distritos` e `/geo/distritos.geojson` (malha do IBGE, baixada pela API sozinha); dados de exemplo trocados sozinhos na subida (tabela `meta_app`); campo `distrito` em `Ocorrencia`; filtro `?distrito=` na lista e nas métricas; prioridade sobe mais um degrau com 6 reportes no grupo |
 | 1.4 | 16/11/2026 | Ian | Visão (C): campo opcional `descricao`, reserva também no conflito foto x texto, limiar por classe `D20=0.75` no cidadão, log por modelo. Análise (D): confiança calibrada (LLM até 0,85, regras até 0,8, +0,05 por concordância, −0,15 se a foto discorda, teto 0,95). Formato de saída igual |
+| 1.5 | 17/11/2026 | Ian | Frota (I): trajetos de exemplo com o traçado real das linhas 3789-10, 8000-10 e 875A-10 (GTFS SPTrans, `api/app/data/linhas_onibus.json`); padrão do "Analisar vídeo" vira 875A-10. Formato igual |
+| 1.5.1 | 17/11/2026 | Ian | Simulação v1.6.0: mais 9 linhas reais do GTFS (~5 km cada) com 3 a 5 danos, algumas com 2ª passagem e reporte de cidadão junto; reportes soltos não viram mais `frota` ao acaso. Formato igual |

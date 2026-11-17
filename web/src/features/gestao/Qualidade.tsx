@@ -2,7 +2,7 @@
 // Qualidade da IA: números em linguagem simples em cima, fila para revisar, leitura das fotos, desvios para emergência
 // (só contagens, nunca o texto de ninguém). O que é real ou demonstração fica em "Detalhes técnicos", recolhido.
 import { api } from "@/providers/api";
-import type { Ocorrencia, Qualidade as TQualidade } from "@/providers/tipos";
+import type { Metricas, Ocorrencia, Qualidade as TQualidade } from "@/providers/tipos";
 import { Carregando, Vazio } from "@/ui/Estados";
 import { BarraPartes } from "@/ui/BarraPartes";
 import { Indicador } from "@/ui/Indicador";
@@ -26,12 +26,12 @@ function estadoModulo(valor: string) {
   return "Ligado";
 }
 
-interface Dados { q: TQualidade; baixa: Ocorrencia[] }
+interface Dados { q: TQualidade; baixa: Ocorrencia[]; m: Metricas }
 
 export function Qualidade() {
   const { dados, erro, carregando, atualizar } = useConsulta<Dados>(async () => {
-    const [q, oc] = await Promise.all([api.qualidade(), api.ocorrencias()]);
-    return { q, baixa: oc.filter((o) => o.confianca > 0 && o.confianca < LIMIAR && !o.corrigida_pelo_gestor) };
+    const [q, oc, m] = await Promise.all([api.qualidade(), api.ocorrencias(), api.metricas({})]);
+    return { q, m, baixa: oc.filter((o) => o.confianca > 0 && o.confianca < LIMIAR && !o.corrigida_pelo_gestor) };
   }, "qualidade");
 
   return (
@@ -44,7 +44,7 @@ export function Qualidade() {
   );
 }
 
-function Conteudo({ q, baixa }: Dados) {
+function Conteudo({ q, baixa, m }: Dados) {
   const fb = (k: string) => q.feedback[k] ?? { util: 0, total: 0 };
   const util = (k: string) => (fb(k).total ? pct((fb(k).util / fb(k).total) * 100) : "—");
   const notaUtil = (k: string) => (fb(k).total ? `${fb(k).util} de ${fb(k).total} respostas` : "Ninguém respondeu ainda");
@@ -54,11 +54,12 @@ function Conteudo({ q, baixa }: Dados) {
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Indicador rotulo="Certeza média da IA" valor={q.classificacao.confianca_media != null ? pct(q.classificacao.confianca_media * 100) : "—"}
           nota={`Em ${q.classificacao.total} ocorrências`} />
         <Indicador rotulo="Corrigidas por pessoas" valor={String(corrigidas)}
-          nota={`${q.classificacao.corrigidas_pelo_cidadao} pelo cidadão, ${q.classificacao.corrigidas_pelo_gestor} pelo gestor`} />
+          nota={`${q.classificacao.corrigidas_pelo_cidadao} pelo cidadão (${pct(m.taxa_correcao_cidadao, 1)}), ${q.classificacao.corrigidas_pelo_gestor} pelo gestor`} />
+        <Indicador rotulo="Foram para outros órgãos" valor={pct(m.pct_fora_prefeitura, 1)} nota="Enel, Sabesp, Comgás e CET" />
         <Indicador rotulo="Reporte ajudou" valor={util("reporte")} nota={notaUtil("reporte")} />
         <Indicador rotulo="Tirar dúvida ajudou" valor={util("assistente")} nota={notaUtil("assistente")} />
       </div>

@@ -40,7 +40,7 @@ async def _gravar(arquivo: UploadFile, destino: Path, max_bytes: int):
 
 @router.post("/frota/processamentos", response_model=Processamento, status_code=202)
 async def enviar_processamento(arquivos: list[UploadFile] = File(..., description="1 vídeo curto OU várias fotos em ordem"),
-                               linha_onibus: str = Form("8000-10", max_length=20),
+                               linha_onibus: str = Form("875A-10", max_length=20),
                                gpx: UploadFile | None = File(None, description="Trajeto GPS opcional; sem ele, trajeto simulado"),
                                gestor: dict = Depends(exigir_gestor)):
     """v1.0: o gestor envia um vídeo curto (até 60 s analisados) ou uma sequência de fotos pela tela Frota.
@@ -55,7 +55,7 @@ async def enviar_processamento(arquivos: list[UploadFile] = File(..., descriptio
         raise HTTPException(422, f"No máximo {config.FROTA_MAX_FOTOS} fotos por envio.")
     if processamentos.ocupado() >= 3:
         raise HTTPException(429, "Já há 3 processamentos na fila. Espere um terminar.")
-    job, pasta = processamentos.criar(gestor["u"], linha_onibus.strip() or "8000-10", tipo, [a.filename for a in arquivos])
+    job, pasta = processamentos.criar(gestor["u"], linha_onibus.strip() or "875A-10", tipo, [a.filename for a in arquivos])
     try:
         for i, a in enumerate(arquivos):  # prefixo numérico: as fotos entram na ordem em que foram escolhidas
             nome = f"{i:03d}{Path(a.filename).suffix.lower()}"

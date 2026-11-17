@@ -13,9 +13,10 @@ import { LegendaMapa, MapaOcorrencias, tomDaOcorrencia, type PontoMapa, type Tra
 import { CabecalhoTela, ErroConsulta } from "./Comum";
 import { EnvioFrota } from "./EnvioFrota";
 import { agrupar } from "./Filas";
-import { dataCurta, useBase, useConsulta } from "./hooks";
+import { BarraPartes } from "@/ui/BarraPartes";
+import { dataCurta, NOME_ORIGEM, useBase, useConsulta } from "./hooks";
 
-interface DadosFrota { passagens: [string, PassagemResumo][]; ocorrencias: Ocorrencia[] }
+interface DadosFrota { passagens: [string, PassagemResumo][]; ocorrencias: Ocorrencia[]; origens: Record<string, number> }
 
 const hora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const num = (v: number, casas = 1) => v.toLocaleString("pt-BR", { maximumFractionDigits: casas, minimumFractionDigits: casas });
@@ -26,6 +27,7 @@ export function Frota() {
     return {
       passagens: Object.entries(p).sort(([, a], [, b]) => b.inicio.localeCompare(a.inicio)),
       ocorrencias: o.filter((x) => x.origem !== "cidadao" || x.status === "possivelmente_resolvida"),
+      origens: o.reduce<Record<string, number>>((m, x) => ({ ...m, [x.origem]: (m[x.origem] ?? 0) + 1 }), {}),
     };
   }, "frota");
   const { nomeCategoria } = useBase();
@@ -45,7 +47,7 @@ export function Frota() {
   const ps = dados?.passagens ?? [];
   const fpsLista = ps.map(([, p]) => p.fps).filter((f): f is number => f != null);
   const fpsMedio = fpsLista.length ? fpsLista.reduce((a, b) => a + b, 0) / fpsLista.length : null;
-  const deteccoes = ps.reduce((a, [, p]) => a + p.deteccoes, 0);
+  const vistosTambem = daFrota.filter((o) => o.origem === "ambos").length;
 
   return (
     <>
@@ -62,19 +64,21 @@ export function Frota() {
         <>
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <Indicador rotulo="Passagens" valor={String(ps.length)} nota={`Em ${new Set(ps.map(([, p]) => p.linha_onibus)).size} linhas de ônibus`} />
-            <Indicador rotulo="Danos encontrados" valor={String(deteccoes)} nota="Buracos e rachaduras no asfalto" />
+            <Indicador rotulo="Danos encontrados" valor={String(daFrota.length)}
+              nota={vistosTambem ? `Buracos e rachaduras, ${vistosTambem} também ${vistosTambem === 1 ? "reportado" : "reportados"} por cidadãos` : "Buracos e rachaduras no asfalto"} />
             <Indicador rotulo="Velocidade da análise" valor={fpsMedio != null ? num(fpsMedio) : "—"} nota="Quadros por segundo" />
             <Indicador rotulo="Possivelmente resolvidas" valor={String(resolvidas.length)} nota="O ônibus passou de novo e não viu" />
           </div>
           <section className="glass grid gap-3 rounded-panel p-3 md:p-4" aria-label="Trajetos no mapa">
             <div className="grid gap-3 lg:grid-cols-[1fr_340px]">
-              <MapaOcorrencias rotulo="Trajetos dos ônibus e detecções" trajetos={trajetos} pontos={pontos} />
+              <MapaOcorrencias rotulo="Trajetos dos ônibus e detecções" trajetos={trajetos} pontos={pontos}
+                foco={passagem ? trajetos.find((t) => t.id === passagem)?.pontos : undefined} />
               <section aria-labelledby="passagens-t" className="grid content-start gap-2">
                 <div className="flex items-center justify-between gap-2">
                   <h2 id="passagens-t" className="text-[15px] font-semibold">Passagens</h2>
                   {passagem && <button type="button" onClick={() => setPassagem(null)} className="min-h-console cursor-pointer text-[13px] font-medium text-ink-muted underline underline-offset-4 hover:text-ink">Mostrar todas</button>}
                 </div>
-                <ul className="grid">
+                <ul className="grid max-h-[372px] overflow-y-auto overscroll-contain pr-1" aria-label="Passagens, da mais recente">
                   {ps.map(([id, p]) => (
                     <li key={id} className="border-t border-[var(--qr-linha,var(--border))] first:border-t-0">
                       <button type="button" aria-pressed={passagem === id} onClick={() => setPassagem(passagem === id ? null : id)}
@@ -94,6 +98,10 @@ export function Frota() {
               </section>
             </div>
             <LegendaMapa comTrajeto />
+          </section>
+          <section className="glass rounded-panel p-4 md:p-5">
+            <BarraPartes titulo="Quem viu o problema (todos os reportes)"
+              partes={["cidadao", "ambos", "frota"].map((k) => ({ chave: k, rotulo: NOME_ORIGEM[k as keyof typeof NOME_ORIGEM], valor: dados.origens[k] ?? 0 }))} />
           </section>
           {resolvidas.length > 0 && (
             <section className="glass rounded-panel p-3 md:p-4" aria-labelledby="resolvidas-t">
