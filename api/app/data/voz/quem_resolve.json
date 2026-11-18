@@ -1,0 +1,354 @@
+[
+ {
+  "id": "buraco",
+  "categoria": "Buraco na via",
+  "exemplos": [
+   "buraco no asfalto",
+   "cratera na rua",
+   "asfalto afundando"
+  ],
+  "responsavel": "Prefeitura de São Paulo, por meio da subprefeitura da região",
+  "canal": "SP156",
+  "como_acionar": "Registre no SP156: telefone 156, aplicativo SP156 ou site sp156.prefeitura.sp.gov.br. Anote o número do protocolo.",
+  "emergencia": "nao",
+  "seguranca": "Se o buraco for muito grande e oferecer risco imediato, sinalize de longe e avise a Defesa Civil pelo 199.",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "iluminacao",
+  "categoria": "Iluminação pública",
+  "exemplos": [
+   "lâmpada do poste apagada",
+   "poste de luz acendendo de dia",
+   "rua escura"
+  ],
+  "responsavel": "Prefeitura de São Paulo (iluminação pública, fiscalizada pela SP Regula)",
+  "canal": "SP156",
+  "como_acionar": "Peça o reparo da iluminação no SP156: telefone 156, aplicativo ou site.",
+  "emergencia": "nao",
+  "seguranca": "Se o fio do poste estiver soltando faísca, o caso é da Enel, pelo telefone de emergência 0800 72 72 196.",
+  "fonte": "SP Regula - Perguntas frequentes sobre iluminação pública",
+  "fonte_url": "https://prefeitura.sp.gov.br/web/spregula/w/iluminacao_publica/perguntas_frequentes/4613",
+  "validado": false
+ },
+ {
+  "id": "fio_faiscando",
+  "categoria": "Fio de energia caído ou faiscando",
+  "exemplos": [
+   "fio no chão soltando faísca",
+   "fio partido",
+   "fio de alta tensão caído"
+  ],
+  "responsavel": "Enel Distribuição São Paulo",
+  "canal": "Central de emergência da Enel",
+  "como_acionar": "Ligue para a central de emergência da Enel: 0800 72 72 196.",
+  "emergencia": "sim",
+  "seguranca": "Não toque no fio e mantenha todos afastados, mesmo que pareça desligado. Se houver fogo ligue 193; se alguém levou choque ligue 192.",
+  "fonte": "Enel SP - Plano de comunicação de contingências (2026)",
+  "fonte_url": "https://www.enel.com.br/content/dam/enel-br/megamenu/diretrizes-para-gerenciamento-de-emergência-e-crise-no-sistema-elétrico/2026/20260827-plano-de-comunicacao-contingencias-enel-sp.pdf",
+  "validado": true
+ },
+ {
+  "id": "fio_telecom",
+  "categoria": "Fiação de telecomunicação solta",
+  "exemplos": [
+   "cabo de internet pendurado",
+   "fio de telefone solto",
+   "emaranhado de fios sem energia"
+  ],
+  "responsavel": "A operadora de telefonia ou internet dona do cabo; a Prefeitura fiscaliza",
+  "canal": "Operadora ou SP156",
+  "como_acionar": "Se souber qual operadora é dona do cabo, avise a operadora. Se não souber, registre no SP156 pelo 156 para a Prefeitura fiscalizar.",
+  "emergencia": "nao",
+  "seguranca": "Se não tiver certeza de que o fio é só de internet ou telefone, trate como fio de energia e ligue para a Enel no 0800 72 72 196.",
+  "fonte": "Câmara Municipal de SP - CPI da Fiação",
+  "fonte_url": "https://www.saopaulo.sp.leg.br/blog/representantes-da-enel-anatel-e-sp-regula-sao-ouvidos-pela-cpi-da-fiacao/",
+  "validado": false
+ },
+ {
+  "id": "poste",
+  "categoria": "Poste danificado",
+  "exemplos": [
+   "poste torto",
+   "poste quebrado",
+   "poste inclinado que vai cair"
+  ],
+  "responsavel": "Enel Distribuição São Paulo",
+  "canal": "Central de relacionamento da Enel",
+  "como_acionar": "Ligue para a Enel no 0800 72 72 120 ou use o aplicativo Enel São Paulo. Se o poste estiver caindo ou com fio solto, ligue para a emergência 0800 72 72 196.",
+  "emergencia": "depende",
+  "seguranca": "Se houver fio solto ou risco de queda, não chegue perto.",
+  "fonte": "Enel SP - Plano de comunicação de contingências (2026)",
+  "fonte_url": "https://www.enel.com.br/content/dam/enel-br/megamenu/diretrizes-para-gerenciamento-de-emergência-e-crise-no-sistema-elétrico/2026/20260827-plano-de-comunicacao-contingencias-enel-sp.pdf",
+  "validado": true
+ },
+ {
+  "id": "furto_fios",
+  "categoria": "Vandalismo ou furto de fios",
+  "exemplos": [
+   "pessoas cortando fios",
+   "roubando cabos do poste",
+   "furto de fiação"
+  ],
+  "responsavel": "Polícia Militar",
+  "canal": "190",
+  "como_acionar": "Se estiver acontecendo agora, ligue 190. Se já aconteceu, registre boletim de ocorrência na Delegacia Eletrônica da Polícia Civil.",
+  "emergencia": "sim",
+  "seguranca": "Não tente impedir a ação. Fique em local seguro.",
+  "fonte": "SP Regula - Perguntas frequentes sobre iluminação pública",
+  "fonte_url": "https://prefeitura.sp.gov.br/web/spregula/w/iluminacao_publica/perguntas_frequentes/4613",
+  "validado": false
+ },
+ {
+  "id": "vazamento_agua",
+  "categoria": "Vazamento de água na rua",
+  "exemplos": [
+   "água jorrando da calçada",
+   "cano estourado na rua",
+   "vazamento no asfalto"
+  ],
+  "responsavel": "Sabesp",
+  "canal": "Central de atendimento da Sabesp",
+  "como_acionar": "Ligue grátis para a Sabesp no 0800 055 0195, mande mensagem no WhatsApp 11 3388 8000 ou use a agência virtual no site da Sabesp.",
+  "emergencia": "depende",
+  "seguranca": "Se a água estiver abrindo cratera ou invadindo casas, avise também a Defesa Civil pelo 199.",
+  "fonte": "Sabesp - canais oficiais de atendimento (divulgados em 2026)",
+  "fonte_url": "https://abcdoabc.com.br/canais-digitais-sabesp-pagamentos/",
+  "validado": true
+ },
+ {
+  "id": "esgoto",
+  "categoria": "Esgoto na rua",
+  "exemplos": [
+   "esgoto a céu aberto",
+   "esgoto voltando pelo bueiro",
+   "cheiro de esgoto na rua"
+  ],
+  "responsavel": "Sabesp",
+  "canal": "Central de atendimento da Sabesp",
+  "como_acionar": "Ligue grátis para a Sabesp no 0800 055 0195 ou use o WhatsApp 11 3388 8000.",
+  "emergencia": "nao",
+  "seguranca": "Evite contato com a água do esgoto.",
+  "fonte": "Sabesp - canais oficiais de atendimento (divulgados em 2026)",
+  "fonte_url": "https://abcdoabc.com.br/canais-digitais-sabesp-pagamentos/",
+  "validado": true
+ },
+ {
+  "id": "gas",
+  "categoria": "Cheiro de gás na rua",
+  "exemplos": [
+   "cheiro forte de gás",
+   "vazamento de gás encanado",
+   "tubulação de gás danificada"
+  ],
+  "responsavel": "Comgás",
+  "canal": "Emergência da Comgás",
+  "como_acionar": "Afaste-se do local e ligue para a Comgás no 0800 011 0197, opção de emergência. Se houver fogo, ligue 193.",
+  "emergencia": "sim",
+  "seguranca": "Não acenda fogo, não fume e não acione interruptores perto do cheiro. Afaste as pessoas.",
+  "fonte": "Comgás - Manual de SSM para parceiros",
+  "fonte_url": "https://www.comgas.com.br/media/rykbibi5/manual-de-ssm-para-parceiros.pdf",
+  "validado": true
+ },
+ {
+  "id": "calcada",
+  "categoria": "Calçada quebrada",
+  "exemplos": [
+   "calçada esburacada",
+   "piso solto na calçada",
+   "calçada com degrau perigoso"
+  ],
+  "responsavel": "O proprietário do imóvel em frente à calçada; a subprefeitura fiscaliza",
+  "canal": "SP156",
+  "como_acionar": "Converse com o proprietário. Se não resolver, peça a fiscalização da calçada no SP156 pelo 156. Calçada de prédio público é responsabilidade da Prefeitura.",
+  "emergencia": "nao",
+  "seguranca": "",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "arvore",
+  "categoria": "Árvore com risco de queda ou precisando de poda",
+  "exemplos": [
+   "galho quase caindo",
+   "árvore inclinada",
+   "pedido de poda"
+  ],
+  "responsavel": "Subprefeitura da região",
+  "canal": "SP156",
+  "como_acionar": "Peça a avaliação ou a poda no SP156 pelo 156. Se a árvore estiver prestes a cair, ligue para a Defesa Civil no 199 ou para os Bombeiros no 193.",
+  "emergencia": "depende",
+  "seguranca": "Não fique embaixo da árvore e afaste carros, se puder.",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "arvore_fiacao",
+  "categoria": "Árvore encostada na fiação",
+  "exemplos": [
+   "galho encostado nos fios",
+   "árvore em cima da rede elétrica"
+  ],
+  "responsavel": "Enel, para a parte elétrica, e subprefeitura, para a poda",
+  "canal": "Enel e SP156",
+  "como_acionar": "Se o fio estiver solto ou faiscando, ligue para a emergência da Enel no 0800 72 72 196. Para pedir a poda, registre no SP156 pelo 156.",
+  "emergencia": "depende",
+  "seguranca": "Não tente podar galhos perto de fios.",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "semaforo",
+  "categoria": "Semáforo com defeito",
+  "exemplos": [
+   "semáforo apagado",
+   "farol piscando amarelo",
+   "sinal de trânsito quebrado"
+  ],
+  "responsavel": "CET, Companhia de Engenharia de Tráfego",
+  "canal": "SP156",
+  "como_acionar": "Registre o defeito no SP156 pelo 156, aplicativo ou site.",
+  "emergencia": "nao",
+  "seguranca": "Atravesse com atenção redobrada.",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "descarte_irregular",
+  "categoria": "Descarte irregular e entulho",
+  "exemplos": [
+   "entulho na calçada",
+   "sofá jogado na rua",
+   "móvel velho abandonado"
+  ],
+  "responsavel": "Prefeitura de São Paulo, por meio da subprefeitura",
+  "canal": "SP156",
+  "como_acionar": "Peça a remoção no SP156 pelo 156. Para descartar do jeito certo pequenas quantidades de entulho, móveis e objetos grandes, procure um Ecoponto da Prefeitura.",
+  "emergencia": "nao",
+  "seguranca": "",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "coleta_lixo",
+  "categoria": "Coleta de lixo não realizada",
+  "exemplos": [
+   "caminhão de lixo não passou",
+   "coleta atrasada"
+  ],
+  "responsavel": "A concessionária de coleta da região, com fiscalização da Prefeitura pela SP Regula",
+  "canal": "SP156",
+  "como_acionar": "Reclame no SP156 pelo 156, aplicativo ou site. A Prefeitura fiscaliza a empresa de coleta.",
+  "emergencia": "nao",
+  "seguranca": "",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "lixo_acumulado",
+  "categoria": "Lixo acumulado em via pública",
+  "exemplos": [
+   "sacos de lixo na esquina",
+   "lixo espalhado na rua"
+  ],
+  "responsavel": "Prefeitura de São Paulo, por meio da subprefeitura",
+  "canal": "SP156",
+  "como_acionar": "Peça a limpeza no SP156 pelo 156, aplicativo ou site.",
+  "emergencia": "nao",
+  "seguranca": "",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "boca_de_lobo",
+  "categoria": "Boca de lobo ou bueiro entupido",
+  "exemplos": [
+   "bueiro cheio de lixo",
+   "boca de lobo entupida",
+   "galeria entupida"
+  ],
+  "responsavel": "Prefeitura de São Paulo, por meio da subprefeitura",
+  "canal": "SP156",
+  "como_acionar": "Peça a limpeza no SP156 pelo 156. Se a rua já estiver alagando e houver risco, ligue para a Defesa Civil no 199.",
+  "emergencia": "depende",
+  "seguranca": "Nunca abra a tampa do bueiro.",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "lixeira",
+  "categoria": "Lixeira pública quebrada ou cheia",
+  "exemplos": [
+   "lixeira da praça quebrada",
+   "lixeira transbordando"
+  ],
+  "responsavel": "Prefeitura de São Paulo",
+  "canal": "SP156",
+  "como_acionar": "Registre no SP156 pelo 156, aplicativo ou site.",
+  "emergencia": "nao",
+  "seguranca": "",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "varricao",
+  "categoria": "Rua sem varrição",
+  "exemplos": [
+   "rua suja",
+   "folhas acumuladas",
+   "varrição não feita"
+  ],
+  "responsavel": "Prefeitura de São Paulo",
+  "canal": "SP156",
+  "como_acionar": "Peça a varrição no SP156 pelo 156, aplicativo ou site.",
+  "emergencia": "nao",
+  "seguranca": "",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "veiculo_abandonado",
+  "categoria": "Veículo abandonado",
+  "exemplos": [
+   "carro parado há meses",
+   "carcaça de carro na rua"
+  ],
+  "responsavel": "Prefeitura de São Paulo",
+  "canal": "SP156",
+  "como_acionar": "Registre no SP156 pelo 156, informando o endereço e, se possível, a placa.",
+  "emergencia": "nao",
+  "seguranca": "",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ },
+ {
+  "id": "alagamento",
+  "categoria": "Alagamento",
+  "exemplos": [
+   "rua alagada",
+   "água entrando nas casas",
+   "enchente"
+  ],
+  "responsavel": "Defesa Civil, em caso de risco, e subprefeitura, para limpeza e drenagem",
+  "canal": "199 e SP156",
+  "como_acionar": "Se houver risco para pessoas ou casas, ligue para a Defesa Civil no 199. Para problemas de drenagem sem risco imediato, registre no SP156.",
+  "emergencia": "depende",
+  "seguranca": "Não atravesse água corrente, nem a pé nem de carro.",
+  "fonte": "Prefeitura de São Paulo - Carta de Serviços SP156",
+  "fonte_url": "https://sp156.prefeitura.sp.gov.br",
+  "validado": false
+ }
+]

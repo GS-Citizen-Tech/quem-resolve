@@ -16,3 +16,6 @@ frota/saida/
 
 # Backups do banco (app/db/backup.py): têm hash de senha e dados de ocorrências
 api/backups/
+
+# Voz do Piper (63 MB): baixa sozinha do Hugging Face na 1ª subida com VOZ_PROVIDER=real
+api/modelos/piper/

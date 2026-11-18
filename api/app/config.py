@@ -21,6 +21,21 @@ LLM_API_KEY = os.getenv("LLM_API_KEY", "") or os.getenv("VISAO_RESERVA_CHAVE", "
 # Lista: se um modelo estiver sem cota (429), sobrecarregado ou lento, tenta o próximo.
 LLM_MODEL = os.getenv("LLM_MODEL", "") or "gemini-3.5-flash-lite,gemini-3.5-flash"
 LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "10"))  # total, somando os modelos da lista
+
+# Voz real (VOZ_PROVIDER=real, disciplina 08): STT faster-whisper + RAG MiniLM + LLM compatível com OpenAI + TTS Piper.
+# Variáveis próprias (prefixo VOZ_) para não misturar com a chave do Gemini usada na visão.
+VOZ_STT_MODELO = os.getenv("VOZ_STT_MODELO", "small")                  # tiny | base | small | medium (em CPU: small)
+VOZ_STT_DEVICE = os.getenv("VOZ_STT_DEVICE", "cpu")                    # cpu | cuda | auto
+VOZ_LLM_BASE_URL = os.getenv("VOZ_LLM_BASE_URL", "https://api.groq.com/openai/v1")
+VOZ_LLM_API_KEY = os.getenv("VOZ_LLM_API_KEY", "")  # própria: a LLM_API_KEY é a do Gemini (análise do relato)
+VOZ_LLM_MODELO = os.getenv("VOZ_LLM_MODELO", "openai/gpt-oss-120b")
+VOZ_TTS_MOTOR = os.getenv("VOZ_TTS_MOTOR", "piper")                    # piper (local) | edge (nuvem Microsoft) | off (voz do navegador)
+VOZ_PIPER_VOZ = os.getenv("VOZ_PIPER_VOZ", "modelos/piper/pt_BR-faber-medium.onnx")  # baixa sozinha se faltar
+VOZ_EDGE_VOZ = os.getenv("VOZ_EDGE_VOZ", "pt-BR-FranciscaNeural")
+VOZ_RAG_LIMIAR = float(os.getenv("VOZ_RAG_LIMIAR", "0.40"))            # calibrado no módulo de PLN (testes/calibrar_rag.py)
+VOZ_MEMORIA_TURNOS = int(os.getenv("VOZ_MEMORIA_TURNOS", "6"))
+VOZ_AQUECER = os.getenv("VOZ_AQUECER", "1") == "1"                     # carrega os modelos na subida (1º pedido não estoura o tempo do front)
+
 YOLO_MODELO = os.getenv("YOLO_MODELO", "modelos/rdd2022-n-r2.onnx")  # o .json com classes e limiares fica ao lado
 YOLO_LIMIAR = float(os.environ["YOLO_LIMIAR"]) if os.getenv("YOLO_LIMIAR") else None  # vazio = limiar do cidadão escolhido no treino
 

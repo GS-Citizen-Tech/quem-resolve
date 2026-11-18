@@ -36,6 +36,8 @@ A visão computacional usa o modelo real por padrão (`VISAO_PROVIDER=yolo`, arq
 
 Quando o YOLO não acha dano, a foto do cidadão pode ir para uma **reserva multimodal** (Gemini Flash), que reconhece as outras categorias (fio, lixo, poste, árvore, alagamento...). Ligue com `VISAO_RESERVA=gemini` e a chave do Google AI Studio em `VISAO_RESERVA_CHAVE` (ou `LLM_API_KEY`). Antes de sair do servidor a foto é reduzida, perde o EXIF e tem rostos, pessoas e placas borrados (LGPD). Sem chave ou com o Gemini fora do ar, o app segue só com o texto. `VISAO_RESERVA=mock` testa o fluxo sem chave.
 
+**Assistente de voz (disciplina 08, PLN):** o botão "Falar" de `/assistente` chama `POST /voz/conversar`. Com `VOZ_PROVIDER=real` entra o módulo de PLN (`api/app/pipelines/voz/`): faster-whisper transcreve na máquina, o guardrail da API roda antes, o RAG (MiniLM multilíngue sobre `api/app/data/voz/`) recupera as fontes, o LLM (Groq `gpt-oss-120b`, chave em `VOZ_LLM_API_KEY`) responde, a adaptação para fala ajusta números e siglas e o Piper gera o áudio. Instale com `pip install -r requirements-voz.txt` (~1,5 GB). A API carrega os modelos em segundo plano na subida (~20 s). O áudio do cidadão é transcrito da memória e descartado; só o texto vai para o LLM. Sem chave ou com o LLM fora do ar, a voz responde indicando o SP156. Em emergência e violência (nível 1 ou 2) não há áudio. Relatório, testes de WER/TTS/latência e a interface Gradio original ficam fora da solução, em `GS PLN/quem-resolve-voz`.
+
 **Frota (vídeo de rua → ocorrências):** ver `frota/README.md`.
 
 **Front** (Node 20+):
