@@ -4,7 +4,7 @@ pydantic==2.13.5
 python-dotenv==1.2.3
 python-multipart==0.0.32
 onnxruntime==1.31.1
-numpy==2.5.4
+numpy>=2.1,<2.6  # 2.5.x exige Python 3.12; no 3.11 instala a 2.4.x
 pillow==13.0.0
 opencv-python-headless==4.14.0.94
 httpx==0.28.1

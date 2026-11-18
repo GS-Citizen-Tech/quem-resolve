@@ -20,6 +20,11 @@ rem Sempre confere as dependencias (rapido quando ja estao instaladas; pega paco
 echo [API] Conferindo dependencias (na primeira vez depois de uma atualizacao pode levar 1 a 2 minutos, nao feche^)...
 "api\.venv\Scripts\python.exe" -m pip install --disable-pip-version-check --progress-bar on -r "api\requirements-dev.txt" || (echo [ERRO] Falha ao instalar as dependencias da API. & pause & exit /b 1)
 if not exist "api\.env" copy "api\.env.example" "api\.env" >nul
+rem Voz real (VOZ_PROVIDER=real no api\.env): Whisper, MiniLM e Piper, ~1,5 GB so na primeira vez
+findstr /r /c:"^VOZ_PROVIDER=real" "api\.env" >nul && (
+  echo [API] Voz real ligada: conferindo as dependencias da voz (na primeira vez baixa ~1,5 GB, nao feche^)...
+  "api\.venv\Scripts\python.exe" -m pip install --disable-pip-version-check --progress-bar on -r "api\requirements-voz.txt" || (echo [ERRO] Falha ao instalar as dependencias da voz. & pause & exit /b 1)
+)
 
 rem ---------- Front ----------
 rem Sempre confere as dependencias (rapido quando ja estao instaladas; pega pacotes novos, como o Plotly do console)

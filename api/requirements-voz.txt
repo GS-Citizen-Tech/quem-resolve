@@ -1,0 +1,11 @@
+# Assistente de voz real (VOZ_PROVIDER=real, disciplina 08 · PLN). Instale DEPOIS do requirements.txt:
+#   pip install -r requirements.txt -r requirements-voz.txt
+# Cerca de 1,5 GB (torch CPU vem com o sentence-transformers). Na 1ª subida baixam o Whisper small (~480 MB)
+# e o MiniLM (~470 MB). A voz do Piper já está em modelos/piper/ (ou baixa sozinha se faltar).
+# Versões testadas em 17/11/2026 (Python 3.11, Windows 11, CPU).
+faster-whisper==1.2.1          # STT local (MIT)
+sentence-transformers==6.3.0   # embeddings do RAG (Apache 2.0)
+openai==3.50.0                 # cliente do LLM (Groq, Gemini ou Ollama, todos compatíveis com a API da OpenAI)
+piper-tts==1.8.0               # TTS local (GPL-3.0)
+edge-tts==7.3.1                # TTS alternativo na nuvem (VOZ_TTS_MOTOR=edge)
+num2words==0.5.14              # números por extenso na adaptação para fala
