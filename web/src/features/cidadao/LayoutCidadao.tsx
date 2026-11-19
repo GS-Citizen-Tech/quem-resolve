@@ -24,6 +24,7 @@ export function LayoutCidadao({ children }: { children: ReactNode }) {
       <main id="conteudo" className="flex-1">{children}</main>
       <footer className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 px-2 pt-2 text-sm text-ink-muted">
         <span>Projeto acadêmico · FIAP 2026</span>
+        <Link href="/privacidade" className="rounded-chip py-2 font-medium underline underline-offset-4 hover:text-ink">Privacidade</Link>
         <Link href="/gestao" className="rounded-chip py-2 font-medium underline underline-offset-4 hover:text-ink">Sou servidor público</Link>
       </footer>
       <Dock itens={ITENS} rotulo="Navegação do app" />

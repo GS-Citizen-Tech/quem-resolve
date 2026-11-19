@@ -15,7 +15,16 @@ type Construtor = new () => ReconhecimentoFala;
 function construtorDitado(): Construtor | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as { SpeechRecognition?: Construtor; webkitSpeechRecognition?: Construtor };
+  // Navegador interno de app (WhatsApp, Instagram, Facebook, TikTok): o objeto existe, mas o ditado não funciona.
+  // Ajuste do teste com pessoas (19/11): tratamos como "sem ditado" e explicamos como falar.
+  if (navegadorDeApp()) return null;
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+/** true quando o site foi aberto dentro de um app (link do WhatsApp, Instagram…), e não no navegador. */
+export function navegadorDeApp(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /WhatsApp|Instagram|FBAN|FBAV|FB_IAB|Line\/|TikTok|musical_ly|; wv\)/i.test(navigator.userAgent);
 }
 
 const semAssinatura = () => () => {};
@@ -34,27 +43,40 @@ export function useDitado(aoFalar: (texto: string) => void) {
   useEffect(() => { cb.current = aoFalar; }, [aoFalar]);
   useEffect(() => () => rec.current?.stop(), []);
 
-  const iniciar = useCallback(() => {
+  /** `automatico`: ligado sozinho ao abrir a tela (sem toque). No celular o navegador costuma recusar; aí pedimos o toque. */
+  const iniciar = useCallback((automatico = false) => {
     const C = construtorDitado();
     if (!C) return;
     setErro(null);
+    let ouviu = false;
+    let falhou = false;
     const r = new C();
     r.lang = "pt-BR";
     r.interimResults = false;
     r.continuous = false;
     r.onresult = (e) => {
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) cb.current(e.results[i][0].transcript.trim());
+        if (e.results[i].isFinal) { ouviu = true; cb.current(e.results[i][0].transcript.trim()); }
       }
     };
     r.onerror = (e) => {
-      setErro(e.error === "not-allowed" || e.error === "service-not-allowed"
-        ? "O microfone não foi liberado. Você pode liberar no navegador ou digitar."
-        : e.error === "no-speech" ? "Não ouvi nada. Toque no microfone e fale de novo." : "O ditado falhou. Você pode digitar.");
+      falhou = true;
+      if (e.error === "aborted") return;
+      setErro(automatico && (e.error === "not-allowed" || e.error === "service-not-allowed")
+        ? "Toque em Falar para começar."
+        : e.error === "not-allowed" || e.error === "service-not-allowed"
+          ? "O microfone não foi liberado. Libere o microfone para este site ou use o microfone do teclado."
+          : e.error === "no-speech" ? "Não ouvi nada. Toque em Falar e fale de novo."
+            : e.error === "network" ? "O ditado precisa de internet. Tente de novo ou use o microfone do teclado."
+              : "O ditado não funcionou aqui. Use o microfone do teclado ou digite.");
     };
-    r.onend = () => setOuvindo(false);
+    r.onend = () => {
+      setOuvindo(false);
+      // Alguns celulares encerram sem erro e sem texto: avisa em vez de ficar em silêncio.
+      if (!ouviu && !falhou) setErro(automatico ? "Toque em Falar para começar." : "Não ouvi nada. Toque em Falar e fale de novo.");
+    };
     rec.current = r;
-    try { r.start(); setOuvindo(true); } catch { setOuvindo(false); }
+    try { r.start(); setOuvindo(true); } catch { setOuvindo(false); setErro(automatico ? "Toque em Falar para começar." : "O ditado não funcionou aqui. Use o microfone do teclado ou digite."); }
   }, []);
 
   const parar = useCallback(() => { rec.current?.stop(); setOuvindo(false); }, []);
