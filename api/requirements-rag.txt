@@ -1,0 +1,6 @@
+# Assistente RAG real (RAG_PROVIDER=real, disciplina 05 · GenAI). Instale DEPOIS do requirements.txt:
+#   pip install -r requirements.txt -r requirements-rag.txt
+# Na 1ª subida baixam o multilingual-e5-small (~470 MB) e o reranker mMiniLM (~470 MB) do Hugging Face.
+# O LLM é o Gemini pela API REST (httpx, já no requirements.txt). Versões testadas em 17/11/2026 (Python 3.11, CPU).
+sentence-transformers==6.3.0   # embeddings E5 e cross-encoder (Apache 2.0); o mesmo do requirements-voz.txt
+rank-bm25==0.2.2               # BM25 do retriever híbrido (Apache 2.0)

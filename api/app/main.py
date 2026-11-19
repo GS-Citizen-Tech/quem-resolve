@@ -10,7 +10,7 @@ from sqlalchemy.exc import DBAPIError
 
 from app import config
 from app.pipelines import simulacao
-from app.providers import armazenamento, distritos, repositorio, voz
+from app.providers import armazenamento, distritos, rag, repositorio, voz
 from app.routers import assistente, base, cidadao, conta, geo, integracoes, ocorrencias
 
 log = logging.getLogger("quem-resolve")
@@ -36,6 +36,8 @@ async def lifespan(_: FastAPI):
     distritos.garantir_em_segundo_plano()  # 1ª subida: baixa os bairros do IBGE sem atrasar a API
     if config.VOZ_PROVIDER == "real" and config.VOZ_AQUECER:
         voz.aquecer_em_segundo_plano()  # Whisper + MiniLM + Piper levam ~20 s para carregar; a API já atende enquanto isso
+    if config.RAG_PROVIDER == "real" and config.RAG_AQUECER:
+        rag.aquecer_em_segundo_plano()  # E5 + reranker + índice da base
     yield
 
 

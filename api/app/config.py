@@ -22,6 +22,18 @@ LLM_API_KEY = os.getenv("LLM_API_KEY", "") or os.getenv("VISAO_RESERVA_CHAVE", "
 LLM_MODEL = os.getenv("LLM_MODEL", "") or "gemini-3.5-flash-lite,gemini-3.5-flash"
 LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "10"))  # total, somando os modelos da lista
 
+# RAG real (RAG_PROVIDER=real, disciplina 05): pipeline do notebook GS-GENAI-CITIZENTECH sobre a base app/data/voz.
+# Chat de texto e voz usam o mesmo RAG. LLM = Gemini, com a mesma chave da análise do relato se RAG_LLM_API_KEY ficar vazio.
+RAG_LLM_API_KEY = os.getenv("RAG_LLM_API_KEY", "") or LLM_API_KEY
+RAG_LLM_MODELO = os.getenv("RAG_LLM_MODELO", "") or LLM_MODEL
+RAG_LLM_TIMEOUT = float(os.getenv("RAG_LLM_TIMEOUT", "20"))           # total, somando os modelos da lista
+RAG_EMBEDDINGS = os.getenv("RAG_EMBEDDINGS", "intfloat/multilingual-e5-small")
+RAG_RERANKER = os.getenv("RAG_RERANKER", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")  # vazio = sem reranker (híbrido puro)
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "4"))
+RAG_CANDIDATOS = int(os.getenv("RAG_CANDIDATOS", "20"))                # candidatos que o reranker reordena
+RAG_LIMIAR = float(os.getenv("RAG_LIMIAR", "0.82"))                    # gate: abaixo disso abstém sem chamar o LLM. Calibrado em 17/11 (scripts/calibrar_rag.py): tema mín 0,846, fora máx 0,850
+RAG_AQUECER = os.getenv("RAG_AQUECER", "1") == "1"                     # carrega E5 + reranker na subida da API
+
 # Voz real (VOZ_PROVIDER=real, disciplina 08): STT faster-whisper + RAG MiniLM + LLM compatível com OpenAI + TTS Piper.
 # Variáveis próprias (prefixo VOZ_) para não misturar com a chave do Gemini usada na visão.
 VOZ_STT_MODELO = os.getenv("VOZ_STT_MODELO", "small")                  # tiny | base | small | medium (em CPU: small)
