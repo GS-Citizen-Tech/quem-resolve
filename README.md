@@ -4,6 +4,14 @@ Roteador inteligente de problemas de zeladoria e limpeza urbana em São Paulo. G
 
 > README em construção: a versão completa (problema, ODS, arquitetura, decisões, ética, validação) entra na fase F4.
 
+## Acesse online
+
+- **App do cidadão:** https://quem-resolve.vercel.app (troque pelo endereço que a Vercel der)
+- **Console da gestão:** mesmo endereço + `/gestao` (entre como `marina` / `demo-123`)
+- **API (documentação):** https://quem-resolve-api.onrender.com/docs
+
+A API fica no plano grátis do Render e "dorme" depois de 15 minutos sem uso: a primeira abertura pode levar até 1 minuto (o site avisa "Ligando o servidor"). Como publicar: `docs/DEPLOY.md`.
+
 ## Estrutura
 
 ```
@@ -40,6 +48,8 @@ Quando o YOLO não acha dano, a foto do cidadão pode ir para uma **reserva mult
 
 **Frota (vídeo de rua → ocorrências):** ver `frota/README.md`.
 
+**Com Docker** (API + front de uma vez): `docker compose up --build` na raiz → http://localhost:3000. Sem `api/.env` usa dados de exemplo em memória. Detalhes em `docs/DEPLOY.md`, seção 5.
+
 **Front** (Node 20+):
 ```bash
 cd web
@@ -50,3 +60,11 @@ npm run dev                      # http://localhost:3000
 
 Páginas prontas na F0: `/` (início do cidadão) e `/componentes` (vitrine dos componentes nos 3 temas).
 Login de demonstração do gestor (API): `marina` / `demo-123` (Subprefeitura) e `joao` / `demo-123` (Sabesp).
+
+## Créditos e dados de terceiros
+
+- **Traçado das linhas de ônibus:** GTFS oficial da SPTrans (Área do Desenvolvedor), baixado em 17/11/2026. Só o caminho é real; passagens e danos são simulados.
+- **Bairros:** 96 distritos oficiais do município (GeoSampa, via `codigourbano/distritos-sp`); reserva pela malha do IBGE.
+- **Mapa e endereços:** © colaboradores do OpenStreetMap (tiles e Nominatim, com limite de uso respeitado pela API).
+- **Modelo de visão:** YOLOv8n treinado no dataset RDD2022 (danos no asfalto).
+- **Foto de fundo:** Avenida Paulista, São Paulo.

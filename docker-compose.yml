@@ -1,0 +1,29 @@
+# Sobe a API e o front juntos: docker compose up --build  →  front em http://localhost:3000, API em http://localhost:8000/docs
+# Sem api/.env a API usa dados de exemplo em memória (nada é salvo). Com api/.env, usa as mesmas chaves e o banco do .env.
+services:
+  api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: api/.env
+        required: false
+    environment:
+      CORS_ORIGINS: http://localhost:3000
+      VISAO_PROVIDER: ${VISAO_PROVIDER:-yolo}
+      VOZ_PROVIDER: mock   # a voz real precisa do requirements-voz.txt (~1,5 GB); rode-a fora do Docker
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000   # o navegador chama a API pela porta publicada
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy

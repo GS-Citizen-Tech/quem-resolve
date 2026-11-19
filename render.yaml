@@ -1,0 +1,54 @@
+# Render Blueprint da API do Quem Resolve? (deploy, 18/11/2026). Passo a passo: docs/DEPLOY.md
+# No Render: New → Blueprint → escolher este repositório. Ele cria o serviço com tudo abaixo e pede só os segredos
+# (as variáveis com "sync: false"). O front fica na Vercel (pasta web/).
+services:
+  - type: web
+    name: quem-resolve-api
+    runtime: python
+    plan: free                 # 512 MB; dorme depois de 15 min sem uso (o front mostra "Ligando o servidor…")
+    region: virginia           # mais perto do Supabase (Canadá)
+    rootDir: api
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      # ---------- Segredos: o Render pede na tela (nunca no Git nem no chat) ----------
+      - key: DATABASE_URL       # Supabase → Connect → Session pooler (a conexão direta é só IPv6 e não funciona no Render)
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_CHAVE_SECRETA
+        sync: false
+      - key: LLM_API_KEY        # Google AI Studio (Gemini): análise do relato e reserva da visão
+        sync: false
+      - key: AUTH_SEGREDO       # assina o login do gestor; o Render gera um valor aleatório
+        generateValue: true
+      # ---------- Front que pode chamar a API (CORS) ----------
+      # Qualquer endereço da Vercel deste projeto (produção e prévias): quem-resolve.vercel.app, quem-resolve-git-….vercel.app
+      - key: CORS_REGEX
+        value: ^https://quem-resolve[a-z0-9-]*\.vercel\.app$
+      - key: CORS_ORIGINS       # endereços fixos extras (domínio próprio, se um dia tiver)
+        value: http://localhost:3000
+      # ---------- Módulos (mock = dados de exemplo) ----------
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: VISAO_PROVIDER
+        value: yolo
+      - key: VISAO_RESERVA
+        value: gemini
+      - key: GEO_PROVIDER
+        value: nominatim
+      - key: RAG_PROVIDER       # o RAG do parceiro ainda não está pronto para a nuvem
+        value: mock
+      - key: VOZ_PROVIDER       # a voz real (Whisper + MiniLM, ~1,5 GB) não cabe nos 512 MB; o "Falar" usa a voz do navegador
+        value: mock
+      # ---------- Limites mais baixos para caber nos 512 MB ----------
+      - key: FROTA_MAX_MB
+        value: "30"
+      - key: FROTA_MAX_SEGUNDOS
+        value: "30"
+      - key: FROTA_MAX_FOTOS
+        value: "40"
