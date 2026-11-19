@@ -11,7 +11,7 @@ Global Solution 2026.2 · FIAP · Tecnólogo em IA · desafio CitizenTech · dis
 | **App do cidadão** | https://quem-resolve.vercel.app |
 | **Console da gestão** | https://quem-resolve.vercel.app/gestao (botão "Marina" no login, ou `marina` / `demo-123`) |
 | **API (documentação interativa)** | https://quem-resolve-api.onrender.com/docs |
-| **Vídeo (5 min)** | _link do YouTube (não listado)_ |
+| **Vídeo (5 min)** | https://youtu.be/PQcTYoblHDU |
 
 > A API fica no plano grátis do Render e "dorme" depois de 15 minutos sem uso. Na primeira abertura o site mostra "Ligando o servidor" por até 1 minuto.
 
