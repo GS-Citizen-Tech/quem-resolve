@@ -41,7 +41,7 @@ services:
         value: gemini
       - key: GEO_PROVIDER
         value: nominatim
-      - key: RAG_PROVIDER       # o RAG do parceiro ainda não está pronto para a nuvem
+      - key: RAG_PROVIDER       # o RAG real (E5 + reranker, ~1 GB, requirements-rag.txt) não cabe nos 512 MB; roda local
         value: mock
       - key: VOZ_PROVIDER       # a voz real (Whisper + MiniLM, ~1,5 GB) não cabe nos 512 MB; o "Falar" usa a voz do navegador
         value: mock
