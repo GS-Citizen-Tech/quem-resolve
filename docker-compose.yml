@@ -12,6 +12,7 @@ services:
       CORS_ORIGINS: http://localhost:3000
       VISAO_PROVIDER: ${VISAO_PROVIDER:-yolo}
       VOZ_PROVIDER: mock   # a voz real precisa do requirements-voz.txt (~1,5 GB); rode-a fora do Docker
+      RAG_PROVIDER: mock   # o RAG real precisa do requirements-rag.txt (~1 GB); rode-o fora do Docker
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s

@@ -112,9 +112,11 @@ class RealVoz:
             return self._tts
 
     def aquecer(self) -> None:
-        """Carrega os modelos e roda uma inferência de cada (a 1ª é bem mais lenta). O LLM não é chamado (cota)."""
-        _ = self.llm
-        self.rag.buscar("buraco na rua")
+        """Carrega os modelos e roda uma inferência de cada (a 1ª é bem mais lenta). O LLM não é chamado (cota).
+        Com RAG_PROVIDER=real o cérebro é o RAG de GenAI, aquecido à parte (providers/rag.py)."""
+        if config.RAG_PROVIDER != "real":
+            _ = self.llm
+            self.rag.buscar("buraco na rua")
         if self.tts is not None:
             caminho = self.tts.sintetizar("Olá, tudo bem? Tem um buraco na minha rua.")
             try:
@@ -136,6 +138,10 @@ class RealVoz:
         modelo = f"{getattr(self._llm, 'nome', config.VOZ_LLM_MODELO)} + MiniLM-L12 multilíngue"
         if not pergunta.strip():
             return RespostaAssistente(resposta=MSG_NAO_OUVI, fontes=[], sem_fonte=True, modelo=modelo)
+        if config.RAG_PROVIDER == "real":
+            # Cérebro da voz = RAG de GenAI (disciplina 05), o mesmo do chat. STT, adaptação para fala e TTS seguem do PLN.
+            from app.providers.rag import obter_rag
+            return obter_rag().responder(pergunta, historico)
 
         mem = memoria_de_historico([m.model_dump() for m in historico], config.VOZ_MEMORIA_TURNOS)
         achados = self.rag.buscar(pergunta, mem.ultima_pergunta())
