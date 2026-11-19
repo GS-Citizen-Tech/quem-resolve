@@ -21,7 +21,39 @@ let tokenGestor: string | null = null;
 /** O estado central chama isto ao fazer login/logout do gestor. */
 export function definirToken(t: string | null) { tokenGestor = t; }
 
+// ---------- Servidor "acordando" (deploy, 18/11) ----------
+// No plano grátis do Render a API dorme depois de 15 min sem uso e leva até ~1 min para voltar.
+// Na 1ª chamada o front pergunta /health com prazo longo; as outras chamadas esperam essa resposta
+// (assim não estouram os 15 s). Se passar de 2,5 s, a tela mostra "Ligando o servidor…" (ui/AvisoServidor).
+export type EstadoServidor = "desconhecido" | "acordando" | "pronto" | "fora";
+let estadoServidor: EstadoServidor = "desconhecido";
+const ouvintes = new Set<(e: EstadoServidor) => void>();
+const mudar = (e: EstadoServidor) => { estadoServidor = e; ouvintes.forEach((f) => f(e)); };
+export const servidor = {
+  estado: () => estadoServidor,
+  ouvir: (f: (e: EstadoServidor) => void) => { ouvintes.add(f); return () => { ouvintes.delete(f); }; },
+};
+let acordando: Promise<void> | null = null;
+export function acordarServidor(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  acordando ??= (async () => {
+    const aviso = setTimeout(() => { if (estadoServidor !== "pronto") mudar("acordando"); }, 2_500);
+    const ctrl = new AbortController();
+    const prazo = setTimeout(() => ctrl.abort(), 90_000);
+    try {
+      const r = await fetch(`${BASE}/health`, { signal: ctrl.signal, cache: "no-store" });
+      mudar(r.ok ? "pronto" : "fora");
+    } catch {
+      mudar("fora");
+    } finally {
+      clearTimeout(aviso); clearTimeout(prazo);
+    }
+  })();
+  return acordando;
+}
+
 async function req<T>(caminho: string, init: RequestInit = {}, limiteMs = TIMEOUT_MS, formato: "json" | "blob" = "json"): Promise<T> {
+  await acordarServidor();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), limiteMs);
   const headers = new Headers(init.headers);

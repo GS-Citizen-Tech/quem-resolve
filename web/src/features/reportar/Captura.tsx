@@ -9,7 +9,7 @@ import { CampoTexto } from "@/ui/CampoTexto";
 import { FolhaMapa } from "@/ui/FolhaMapa";
 import { FotoEntrada } from "@/ui/FotoEntrada";
 import { pedirPosicao, textoCoordenadas, textoEndereco, useEndereco } from "@/ui/useLocal";
-import { useDitado } from "@/ui/useVoz";
+import { navegadorDeApp, useDitado } from "@/ui/useVoz";
 import type { Localizacao } from "@/providers/tipos";
 
 type FaseLocal = "parado" | "buscando" | "ok" | "negado" | "indisponivel";
@@ -46,7 +46,7 @@ export function Captura({ descricao, local, endereco, previa, preparandoFoto, er
   useEffect(() => {
     if (comecou.current || ditado.suportado === null) return;
     comecou.current = true;
-    if (inicio === "voz" && ditado.suportado) ditado.iniciar();
+    if (inicio === "voz" && ditado.suportado) ditado.iniciar(true);
     else if (inicio === "escrever" || (inicio === "voz" && !ditado.suportado)) campo.current?.focus();
   }, [inicio, ditado]);
 
@@ -98,7 +98,7 @@ export function Captura({ descricao, local, endereco, previa, preparandoFoto, er
           placeholder="Ex.: buraco grande na rua, perto do ponto de ônibus" value={descricao} erro={erroDescricao ?? undefined}
           className={ditado.suportado ? "pb-16" : ""}
           dentro={ditado.suportado ? (
-            <button type="button" onClick={ditado.ouvindo ? ditado.parar : ditado.iniciar} aria-pressed={ditado.ouvindo}
+            <button type="button" onClick={ditado.ouvindo ? ditado.parar : () => ditado.iniciar()} aria-pressed={ditado.ouvindo}
               className={`inline-flex min-h-toque cursor-pointer items-center gap-2 rounded-pill px-4 text-base font-semibold ${ditado.ouvindo ? "bg-danger text-on-emergency" : "bg-primary text-primary-foreground hover:bg-brand-hover"}`}>
               {ditado.ouvindo ? <Square aria-hidden="true" className="size-4" fill="currentColor" /> : <Mic aria-hidden="true" className="size-5" strokeWidth={1.75} />}
               {rotuloBola}
@@ -108,7 +108,7 @@ export function Captura({ descricao, local, endereco, previa, preparandoFoto, er
         {ditado.ouvindo && <p role="status" className="text-base text-ink-muted">Estou ouvindo. Fale o problema.</p>}
         {ditado.erro && <p role="alert" className="text-base text-ink-muted">{ditado.erro}</p>}
         {ditado.suportado === false && (
-          <p className="text-base text-ink-muted">Este navegador não tem ditado. Digite ou use o microfone do teclado.</p>
+          <p className="text-base text-ink-muted">{navegadorDeApp() ? "Aberto pelo app, o ditado não funciona. Use o microfone do teclado ou abra o link no Chrome ou no Safari." : "Este navegador não tem ditado. Use o microfone do teclado ou digite."}</p>
         )}
       </Cartao>
 

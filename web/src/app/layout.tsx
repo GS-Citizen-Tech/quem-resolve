@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible_Mono, Atkinson_Hyperlegible_Next } from "next/font/google";
 import { AppStateProvider } from "@/state/AppState";
+import { AvisoServidor } from "@/ui/AvisoServidor";
 import "./globals.css";
 
 // Fonte do design system: feita para baixa visão (I, l, 1 e O, 0 diferentes).
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Pular para o conteúdo
         </a>
         <AppStateProvider>{children}</AppStateProvider>
+        <AvisoServidor />
       </body>
     </html>
   );

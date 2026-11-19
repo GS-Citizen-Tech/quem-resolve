@@ -72,6 +72,8 @@ DISTRITOS_ARQUIVO = os.getenv("DISTRITOS_ARQUIVO", "")
 DISTRITOS_BAIXAR = os.getenv("DISTRITOS_BAIXAR", "1").lower() not in ("0", "false", "nao", "não", "off")
 
 CORS_ORIGINS = _lista("CORS_ORIGINS", "http://localhost:3000")
+# Deploy (18/11): links de prévia da Vercel mudam a cada deploy. Ex.: ^https://quem-resolve(-[a-z0-9-]+)?\.vercel\.app$ (vazio = desligado)
+CORS_REGEX = os.getenv("CORS_REGEX", "").strip() or None
 LIMIAR_CONFIANCA = float(os.getenv("LIMIAR_CONFIANCA", "0.5"))  # abaixo disso: confiança baixa, pede confirmação
 LIMIAR_IOT = float(os.getenv("LIMIAR_IOT", "0.7"))
 SEED_OCORRENCIAS = int(os.getenv("SEED_OCORRENCIAS", "120"))

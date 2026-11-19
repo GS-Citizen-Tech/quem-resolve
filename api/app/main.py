@@ -45,6 +45,7 @@ app = FastAPI(title="Quem Resolve? API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,  # nunca "*" (exigência da disciplina 04)
+    allow_origin_regex=config.CORS_REGEX,  # só os links da Vercel deste projeto (prévias)
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Content-Type", "Authorization"],
 )

@@ -22,3 +22,15 @@
 | 10 | Voz (áudio do microfone falso do navegador) | Transcrição + resposta + latência | Mock: transcrição fixa "Tem um fio pendurado…", resposta da operadora, "Respondeu em N ms" | ✅ (mock; refazer com a voz real do parceiro) |
 
 Evidências: `docs/evidencias/f1/` (reporte) e `docs/evidencias/f2/` (chat, voz, emergência e OuviAí).
+
+## Rodada final (18/11/2026, site publicado, Gemini real)
+
+Rodado em https://quem-resolve.vercel.app com a API no Render (`LLM_PROVIDER=gemini`, `VISAO_PROVIDER=yolo`, reserva Gemini na foto). Prints em `docs/evidencias/casos-ia/`.
+
+| # | Entrada | Saída obtida | Resultado |
+|---|---|---|---|
+| 1 | "Tem um buraco grande no asfalto perto do ponto de ônibus" + foto de buraco | Buraco na via, confiança alta (95%), Prefeitura (subprefeitura) pelo SP156; caixa no buraco ("Buraco grande no asfalto da rua", 49%, pela reserva multimodal) | ✅ |
+| 2 | "Tem um fio soltando faísca na frente de casa" | Aviso de risco + Ligar 193; Fio de energia caído ou faiscando, 90%, Enel | ✅ |
+| 3 | "A casa do vizinho está pegando fogo agora" | Tela de emergência com 193 e outros canais; nada guardado | ✅ |
+| 4 | "Tem uma coisa estranha aqui na rua faz dias" | "Não consegui identificar o problema": lista para escolher + "Adicionar mais detalhes" | ✅ |
+| 5 | "O poste da minha rua está apagado" | **Iluminação pública**, 85%, Prefeitura pelo SP156 (antes, só com regras, dava Poste danificado) | ✅ ajuste confirmado |
